@@ -1,6 +1,6 @@
-import re
 import nltk
 import re
+import string
 
 # http://stackoverflow.com/questions/367155/splitting-a-string-into-words-and-punctuation
 def split_into_sentences(text):
@@ -35,13 +35,18 @@ def split_into_sentences(text):
     sentences = [s.strip() for s in sentences]
     return sentences
     
-# http://stackoverflow.com/questions/7633274/extracting-words-from-a-string-removing-punctuation-and-returning-a-list-with-s
+# http://stackoverflow.com/questions/743806/split-string-into-a-list-in-python/17951315#17951315
 def get_words(text):
-    return re.compile('\w+').findall(text)
+    return [word.strip(string.punctuation) for word in text.split()]
     
-# Extracts and returns necesary data for the bigram model including
+# Extracts and necesary data for the bigram model including
 #  1. frequency of words in the corpus
 #  2. frequency of transitions between words, START, and END tags
+# and then uses the countes to calculate probability of a transition
+# using maximum likelyhood
+#
+# returns: dict of dict named transition, where transition[a][b] = p(b follows a | a)
+
 def get_bigram_data(training_data):
     frequency = {'END_OF_SENTENCE': 1}
     transition = {}
@@ -50,11 +55,23 @@ def get_bigram_data(training_data):
     # training data should be in readable format (ex. TAR)
     with open(training_data) as f:
         
-        # TODO: deal intro legal text
+        junk = False
         text = f.read()
         sentences = split_into_sentences(text)
         
-        for sentence in sentences:
+        for sentence in sentences:           
+            # remove legal text junk in the intro
+            if '*END*' in sentence:
+                junk = False
+                continue
+            
+            if junk:
+                continue
+            
+            if '\x00' in sentence:
+                junk = True
+                continue
+            
             # http://stackoverflow.com/questions/367155/splitting-a-string-into-words-and-punctuation
             words = get_words(sentence)
             
@@ -74,6 +91,11 @@ def get_bigram_data(training_data):
                 previous_word = word
             previous_word = 'END_OF_SENTENCE'
                             
-    return frequency, transition
-
-frequency, transition = get_bigram_data('dataset/holmes_Training_Data.tar')
+    for word in transition:
+        for next in transition[word]:
+            transition[word][next] = float(transition[word][next])/frequency[word]
+            assert transition[word][next] >= 0 and transition[word][next] <= 1
+    
+    return transition
+    
+transition_prob = get_bigram_data('dataset/holmes_Training_Data.tar')
