@@ -40,12 +40,13 @@ def get_words(text):
     return [word.strip(string.punctuation) for word in text.split()]
     
 # Extracts and necesary data for the bigram model including
-#  1. frequency of words in the corpus
-#  2. frequency of transitions between words, START, and END tags
-# and then uses the countes to calculate probability of a transition
-# using maximum likelyhood
+#       1. frequency of words in the corpus
+#       2. frequency of transitions between words, START, and END tags
+#   and then uses the countes to calculate probability of a transition
+#   using maximum likelyhood
 #
-# returns: dict of dict named transition, where transition[a][b] = p(b follows a | a)
+# Returns: dict named frequency where frequency[a] = # occurences of a in the corpus 
+#          dict of dict named transition, where transition[a][b] = p(b follows a | a)        
 
 def get_bigram_data(training_data):
     frequency = {'END_OF_SENTENCE': 1}
@@ -96,6 +97,139 @@ def get_bigram_data(training_data):
             transition[word][next] = float(transition[word][next])/frequency[word]
             assert transition[word][next] >= 0 and transition[word][next] <= 1
     
-    return transition
+    return frequency, transition
     
-transition_prob = get_bigram_data('dataset/holmes_Training_Data.tar')
+# Extracts from test data the answers questions into an answer dict where
+#   answer['10'] gives the multiple choice answer to question 10
+# Extracts from test data the problem statement into a problem dict where
+#   problem['10']['statement'] gives the problem statement for question 10
+#   problem['10'][letter] gives the answer corresponding to the letter such that
+#   letter is an element in ['a', 'b', 'c', 'd', 'e']
+# Returns: answer dict and problem dict 
+    
+def get_test_data(test_data):
+    answer = {}
+    question = {}
+    
+    with open(test_data) as f:
+    
+        # skip first 20 junk lines
+        for _ in range(19):
+            next(f)
+        
+        # extract the correct answers
+        for line in f:
+                
+            # first line messed up     
+            if '\x00' in line:
+                line = '1) [d] swear'
+                
+            data = line.split()
+            q_num = data[0].strip(')')
+            q_ans = data[1][1]
+            answer[q_num] = q_ans
+            
+            # there are exactly 1040 questions in the test set
+            if q_num == '1040':
+                break
+        
+        expecting = ('QUESTION', 1)
+        q_num = 0
+        
+        # extract the question data
+        for line in f:
+            
+            # first question line is messed up
+            if '\x00' in line:
+                line = '1) I have seen it on him , and could _____ to it.'
+            
+            words = line.split()
+            
+            # skip empty lines
+            if len(words) == 0:
+                continue
+            
+            # Format of problems should be a question statement followed by
+            # 5 answer choices for to fill in the blank for the question statement
+            
+            if expecting[0] == 'QUESTION':
+                q_num = words[0].strip(')')
+                sentence = ' '.join(words[1:])
+                question[q_num] = {}
+                question[q_num]['statement'] = sentence
+                expecting = ('ANSWER', 5)
+                
+            elif expecting[0] == 'ANSWER':
+                ans_choice = words[0].strip(')')
+                question[q_num][ans_choice] = words[1]
+                expecting = ('ANSWER', expecting[1] - 1)
+                
+                # all five answer options were seen, look for question statement next
+                if expecting[1] == 0:
+                    expecting = ('QUESTION', 1)
+                    
+                    # should stop reading after completing all 1040 test questions
+                    if q_num == '1040':
+                        break
+                        
+    return question, answer
+    
+# The bigram chooses the best option based on highest transition probability
+#   from the previous word. If no transition has been seen before, it picks the word
+#   with the greatest frequency of occurence in the corpus
+# Returns: percent correct, model answers
+
+def get_bigram_results(frequency, transition_prob, question, answer):
+    options = 'abcde'
+    model_answer = {}
+   
+    for q_num in question:
+    
+        # extract the word before the blank
+        statement = question[q_num]['statement']
+        words = statement.split()
+        blank_index = words.index('_____')
+        previous_word = 'END_OF_SENTENCE'
+        if blank_index > 0:
+            previous_word = words[blank_index-1]
+            
+        # find the best option based on highest transition probability
+        best_option = ''
+        p_best_option = 0
+        for option in options:
+            option_word = question[q_num][option]
+            if previous_word in transition_prob:
+                if option_word in transition_prob[previous_word]:
+                    p_option_word = transition_prob[previous_word][option_word]
+                    if p_option_word > p_best_option:
+                        p_best_option = p_option_word
+                        best_option = option
+        
+        # if no transition seen before, pick the option which had occured most often
+        highest_freq = 0
+        if best_option == '':
+            for option in options:
+                option_word = question[q_num][option]
+                if option_word in frequency:
+                    freq_option_word = frequency[option_word]
+                    if freq_option_word > highest_freq:
+                        highest_freq = freq_option_word
+                        best_option = option
+        
+        model_answer[q_num] = best_option
+                
+    # calculate accuracy of model
+    correct = 0
+    total = 0
+    for q_num in answer:
+        total += 1
+        if model_answer[q_num] == answer[q_num]:
+            correct += 1
+    
+    percent_correct = float(correct)/total
+
+    return percent_correct, model_answer
+    
+frequency, transition_prob = get_bigram_data('dataset/holmes_Training_Data.tar')
+question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1.tar')
+percent_correct, model_answers = get_bigram_results(frequency, transition_prob, question, answer)
