@@ -174,5 +174,62 @@ def get_test_data(test_data):
                         
     return question, answer
     
+# The bigram chooses the best option based on highest transition probability
+#   from the previous word. If no transition has been seen before, it picks the word
+#   with the greatest frequency of occurence in the corpus
+# Returns: percent correct, model answers
+
+def get_bigram_results(frequency, transition_prob, question, answer):
+    options = 'abcde'
+    model_answer = {}
+   
+    for q_num in question:
+    
+        # extract the word before the blank
+        statement = question[q_num]['statement']
+        words = statement.split()
+        blank_index = words.index('_____')
+        previous_word = 'END_OF_SENTENCE'
+        if blank_index > 0:
+            previous_word = words[blank_index-1]
+            
+        # find the best option based on highest transition probability
+        best_option = ''
+        p_best_option = 0
+        for option in options:
+            option_word = question[q_num][option]
+            if previous_word in transition_prob:
+                if option_word in transition_prob[previous_word]:
+                    p_option_word = transition_prob[previous_word][option_word]
+                    if p_option_word > p_best_option:
+                        p_best_option = p_option_word
+                        best_option = option
+        
+        # if no transition seen before, pick the option which had occured most often
+        highest_freq = 0
+        if best_option == '':
+            for option in options:
+                option_word = question[q_num][option]
+                if option_word in frequency:
+                    freq_option_word = frequency[option_word]
+                    if freq_option_word > highest_freq:
+                        highest_freq = freq_option_word
+                        best_option = option
+        
+        model_answer[q_num] = best_option
+                
+    # calculate accuracy of model
+    correct = 0
+    total = 0
+    for q_num in answer:
+        total += 1
+        if model_answer[q_num] == answer[q_num]:
+            correct += 1
+    
+    percent_correct = float(correct)/total
+
+    return percent_correct, model_answer
+    
 frequency, transition_prob = get_bigram_data('dataset/holmes_Training_Data.tar')
 question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1.tar')
+percent_correct, model_answers = get_bigram_results(frequency, transition_prob, question, answer)
