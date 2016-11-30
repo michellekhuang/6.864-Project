@@ -28,7 +28,7 @@ STOPWORDS = set(['a', 'about', 'above', 'after', 'again', 'against', 'all', 'am'
 # Output: best answer choice for the input question
 #
 # Test Results (on 1040 test samples):
-#   30.7% accuracy using wmd
+#   30.7% accuracy using wmd 22% 18% 15.4% 14%
 #   30.3% accuracy using rwmd
 #   31.25% accuracy using wcd
 #   18.8% accuracy using cos
@@ -40,11 +40,11 @@ def find_best_answer(q_info, m, metric):
     answers = 'abcde'
     for answer in answers:
         try:
-            distances.append(metric(s, q_info[answer], m))
+            distances.append((answer, metric(s, q_info[answer], m)))
         except:
-            return 'a'
-    best_index = distances.index(min(distances))
-    return answers[best_index]
+            distances.append((answer, float('inf')))
+    distances = sorted(distances, key = lambda x: x[1])
+    return distances[0][0]
     
 # Tries to determine closeness of options to specific non-stopwords in the sentence
 # Considering changing to phrases
@@ -81,9 +81,10 @@ wrong = 0.0
 print 'predicting answers... '
 
 for i in range(1, len(question)+1):
+    print i
     q_num = str(i)
-    best = find_best_answer(question[q_num], m, euc)
-    if best == answer[q_num]:
+    best = find_best_answer(question[q_num], m, wmd)
+    if answer[q_num] in best:
         right += 1
     else:
         wrong += 1
