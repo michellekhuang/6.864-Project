@@ -135,17 +135,22 @@ def rwmd(doc1, doc2, m):
     Relaxed Word Mover's Distance (RWMD)
     '''
 
-    # will commit after pset is due
-    pass
+    d1, words1 = preprocess(doc1, m, True)
+    d2, words2 = preprocess(doc2, m, True)
+    dist_matrix = compute_bipartite_dist_matrix(m, words1, words2)
+    min_vals_l1 = dist_matrix.min(axis=1)
+    min_vals_l2 = dist_matrix.min(axis=0)
+    l1 = np.dot(d1, min_vals_l1)
+    l2 = np.dot(d2, min_vals_l2)
+    return max(l1, l2)
     
-
 def wcd(doc1, doc2, m):
     '''
     Word Centroid Distance (WCD)
     '''
 
-    # will commit after pset is due
-    pass
+    d1, d2, words = joint_preprocess(doc1, doc2, m)
+    return np.linalg.norm(np.dot(m[words].T, d1) - np.dot(m[words].T, d2))
     
 def cos(doc1, doc2, m):
     '''

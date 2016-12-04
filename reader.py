@@ -16,42 +16,75 @@
 # From https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/rnn/ptb/reader.py
 
 """Utilities for parsing text files."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
 
 import collections
+import string
 import os
 
-import tensorflow as tf
+# import tensorflow as tf
 
 
 def _read_words(filename):
-  with tf.gfile.GFile(filename, "r") as f:
-    return f.read().decode("utf-8").replace(string.punctuation, "<eos>").split()
-
+  # Folders in wsj 00 - 24
+  folder_name = 0
+  sentences = []
+  for i in xrange(25):
+    if i < 10:
+      folder_name = '0' + str(i)
+    # Files 01 - 99
+    for j in xrange(1,100):
+      if j < 10:
+        file_name = '0' + str(j)
+      with open(filename + folder_name + "/wsj_" + folder_name + file_name, 'r') as f:
+        for line in f:
+          line = line.replace('\n', '')
+          punctuation = "!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+          new_line = line
+          for char in line:
+            if char in punctuation:
+              new_line = new_line.replace(char, '')
+          if new_line != 'START ' and new_line != '':
+            sentences.append(new_line)
+  return sentences
 
 def _build_vocab(filename):
-  data = _read_words(filename)
-  reverse_data = data[::-1]
+  sentences = _read_words(filename)
+  data = []
+  for sentence in sentences:
+    data.extend(sentence.split())
 
+  # counter = dictionary of word, count
   counter = collections.Counter(data)
-  reverse_counter = collections.Counter(reverse_data)
+  # list of tuples of (word, count) in descending order
   count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
-  reverse_pairs = sorted(reverse_counter.items(), key=lambda x: (-x[1], x[0]))
 
-  words, _ = list(zip(*count_pairs)) + list(zip(*reverse_pairs))
+  # Return list of [(words),(counts)] in descending order
+  words, _ = list(zip(*count_pairs))
+  # Return dictionary of {word : index in counts tuple}
   word_to_id = dict(zip(words, range(len(words))))
 
   return word_to_id
 
+# print(_build_vocab('dataset/treebank2/raw/wsj/'))
 
-def _file_to_word_ids(filename, word_to_id):
-  data = _read_words(filename)
+def _file_to_word_ids(filename, word_to_id, train = True):
+  """ Return list of indices for each word to the counts tuple """
+  sentences = []
+  if train:
+    sentences = _read_words(filename)
+  else:
+    sentences = _read_words_test(filename)
+  data = []
+  for sentence in sentences:
+    data.extend(sentence.split())
   return [word_to_id[word] for word in data if word in word_to_id]
 
 
-def bidirectional_raw_data(data_path=None):
+### TODO: format test data correctly (maybe new reader for test data itself?)
+def _raw_data(data_path=None):
   """Load training/test raw data from data directory "data_path".
   Reads text files, converts strings to integer ids,
   and performs mini-batching of the inputs.
@@ -63,7 +96,7 @@ def bidirectional_raw_data(data_path=None):
     where each of the data objects can be passed to Iterator.
   """
 
-  train_path = os.path.join(data_path, "dataset/holmes_Training_Data.tar")
+  train_path = os.path.join(data_path, "dataset/treebank2/raw/wsj/")
   # valid_path = os.path.join(data_path, "ptb.valid.txt")
   test_path = os.path.join(data_path, "dataset/MSR_Sentence_Completion_Challenge_V1.tar")
 
