@@ -1,2 +1,4 @@
 mnist_softmax.py
 dataset/Holmes_Training_Data
+dataset/MSR_Sentence_Completion_Challenge_V1/
+dataset/treebank2/
