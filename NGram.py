@@ -14,7 +14,7 @@ import os
 
 def get_bigram_data(training_data_folder):
 
-    print 'EXTRACTING TRAINING DATA...'
+    print 'Extracting Training Data...'
 
     frequency = {'END_OF_SENTENCE': 1}
     transition = {}
@@ -26,7 +26,7 @@ def get_bigram_data(training_data_folder):
             print os.path.join(root, file)
             with open(os.path.join(root, file)) as f:
                 
-                print 'starting ' + file + ' which is file ' + str(i) + ' out of ' + str(len(files))
+                print 'Starting ' + file + ' which is file ' + str(i) + ' out of ' + str(len(files))
                 
                 text = f.read()
                 
@@ -73,7 +73,7 @@ def get_bigram_data(training_data_folder):
     
 def get_test_data(test_data_folder):
 
-    print 'EXTRACTING TEST DATA...'
+    print 'Extracting Test Data...'
 
     answer = {}
     question = {}
@@ -128,7 +128,7 @@ def get_test_data(test_data_folder):
 
 def get_bigram_results(frequency, transition_prob, question, answer):
 
-    print 'COMPUTING MODEL RESULTS...'
+    print 'Computing Model Results...'
 
     options = 'abcde'
     model_answer = {}
@@ -180,7 +180,12 @@ def get_bigram_results(frequency, transition_prob, question, answer):
 
     return percent_correct, model_answer
     
-frequency, transition_prob = get_bigram_data('dataset/Holmes_Training_Data/')
-question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
-percent_correct, model_answers = get_bigram_results(frequency, transition_prob, question, answer)
-print 'PERCENT CORRECT: ' + str(percent_correct)
+def run_bigram_model():
+    frequency, transition_prob = get_bigram_data('dataset/Holmes_Training_Data/')
+    question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
+    percent_correct, model_answers = get_bigram_results(frequency, transition_prob, question, answer)
+    print 'Percent Correct: ' + str(percent_correct)
+
+if __name__ == '__main__':
+    run_bigram_model()
+
