@@ -21,13 +21,14 @@
 # from __future__ import print_function
 
 import collections
-import string
-import os
 from NGram import get_test_data
+import os
+import string
+import tensorflow as tf
 
-# import tensorflow as tf
-
-
+# Goes through the WSJ corpus and reads all of the sentences
+#   Parameters: path of folder of the wsj corpus
+#   Returns: list of sentences
 def _read_words(filename):
 
     # Folders in wsj 00 - 24
@@ -61,6 +62,9 @@ def _read_words(filename):
     
 # print _read_words("dataset/treebank2/raw/wsj/")
     
+# Goes through Test Data and reads all of the sentences
+#   Parameters: folder containing the challenge questions and answers
+#   Returns: list of sentences in the format 'I have seen it on him , and could _____ to it.'
 def _read_test(datafolder):
     question, answer = get_test_data(datafolder)
     sentences = [question[x]['statement'] for x in question]
@@ -68,6 +72,9 @@ def _read_test(datafolder):
 
 # print _read_test("dataset/MSR_Sentence_Completion_Challenge_V1/Data/")
 
+# Reads all words in document and creates a word to id mapping
+#   Parameters: filename of document to be read
+#   Returns: dictionary of unique words mapped to an integer id
 def _build_vocab(filename):
     sentences = _read_words(filename)
     data = []
@@ -88,6 +95,10 @@ def _build_vocab(filename):
 
 # print(_build_vocab('dataset/treebank2/raw/wsj/'))
 
+# Converts a text document into a list of ids that map to the original words
+#   Parameters: filename indicating the document location (if train) or folder location (if not train)
+#               train boolean determining whether or not this is the training set
+#   Returns: list with integers representing the mapping of words to their ids
 def _file_to_word_ids(filename, word_to_id, train = True):
     """ Return list of indices for each word to the counts tuple """
     sentences = []
@@ -100,8 +111,9 @@ def _file_to_word_ids(filename, word_to_id, train = True):
         data.extend(sentence.split())
     return [word_to_id[word] for word in data if word in word_to_id]
 
-
-### TODO: format test data correctly (maybe new reader for test data itself?)
+# Maps train and test set to the corresponding ids
+#   Parameters: data_path: path to your repo of 6.864_project (can just leave at None)
+#   Returns: Mapped version of train data, test data, and the length of the vocabulary
 def _raw_data(data_path=None):
     """Load training/test raw data from data directory "data_path".
     Reads text files, converts strings to integer ids,
