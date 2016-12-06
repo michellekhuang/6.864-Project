@@ -23,21 +23,30 @@
 import collections
 import string
 import os
+from NGram import get_test_data
 
 # import tensorflow as tf
 
 
 def _read_words(filename):
+
     # Folders in wsj 00 - 24
     folder_name = 0
     sentences = []
+    
     for i in xrange(25):
         if i < 10:
             folder_name = '0' + str(i)
+        else:
+            folder_name = str(i)
+            
         # Files 01 - 99
         for j in xrange(1,100):
             if j < 10:
                 file_name = '0' + str(j)
+            else:
+                file_name = str(j)
+                
             with open(filename + folder_name + "/wsj_" + folder_name + file_name, 'r') as f:
                 for line in f:
                     line = line.replace('\n', '')
@@ -49,6 +58,15 @@ def _read_words(filename):
                     if new_line != 'START ' and new_line != '':
                         sentences.append(new_line)
     return sentences
+    
+# print _read_words("dataset/treebank2/raw/wsj/")
+    
+def _read_test(datafolder):
+    question, answer = get_test_data(datafolder)
+    sentences = [question[x]['statement'] for x in question]
+    return sentences
+
+# print _read_test("dataset/MSR_Sentence_Completion_Challenge_V1/Data/")
 
 def _build_vocab(filename):
     sentences = _read_words(filename)
@@ -76,7 +94,7 @@ def _file_to_word_ids(filename, word_to_id, train = True):
     if train:
         sentences = _read_words(filename)
     else:
-        sentences = _read_words_test(filename)
+        sentences = _read_test(filename)
     data = []
     for sentence in sentences:
         data.extend(sentence.split())
@@ -96,17 +114,19 @@ def _raw_data(data_path=None):
         where each of the data objects can be passed to Iterator.
     """
 
-    train_path = os.path.join(data_path, "dataset/treebank2/raw/wsj/")
+    train_path = "dataset/treebank2/raw/wsj/"
     # valid_path = os.path.join(data_path, "ptb.valid.txt")
-    test_path = os.path.join(data_path, "dataset/MSR_Sentence_Completion_Challenge_V1.tar")
+    test_path = "dataset/MSR_Sentence_Completion_Challenge_V1/Data/"
 
-    word_to_id = _build_vocab(train_path)
-    train_data = _file_to_word_ids(train_path, word_to_id)
+    word_to_id = _build_vocab(train_path)  
+    train_data = _file_to_word_ids(train_path, word_to_id, True)
     # valid_data = _file_to_word_ids(valid_path, word_to_id)
-    test_data = _file_to_word_ids(test_path, word_to_id)
+    test_data = _file_to_word_ids(test_path, word_to_id, False)
     vocabulary = len(word_to_id)
     return train_data, test_data, vocabulary
 
+#train, test, vocab = _raw_data()
+#print len(train), train[:10], len(test), test[:10], vocab
 
 def bidirectional_producer(raw_data, batch_size, num_steps, name=None):
     """Iterate on the raw data.

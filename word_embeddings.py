@@ -1,6 +1,6 @@
 from metrics import *
 from model import Model
-import NGram
+from NGram import get_test_data
 
 # IMPORTANT: Include vectors.txt file with word embeddings from PSET4 at the same level
 #            as the code here.
@@ -70,7 +70,7 @@ def find_best_answer_2(q_info, m, metric):
 def run_word_embeddings_model():
     print 'Loading Test Data...'
 
-    question, answer = NGram.get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
+    question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
 
     print 'Loading Model Data...'
 
