@@ -1,43 +1,7 @@
 import nltk
 import re
 import string
-
-# http://stackoverflow.com/questions/367155/splitting-a-string-into-words-and-punctuation
-def split_into_sentences(text):
-    caps = "([A-Z])"
-    prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
-    suffixes = "(Inc|Ltd|Jr|Sr|Co)"
-    starters = "(Mr|Mrs|Ms|Dr|He\s|She\s|It\s|They\s|Their\s|Our\s|We\s|But\s|However\s|That\s|This\s|Wherever)"
-    acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
-    websites = "[.](com|net|org|io|gov)"
-    
-    text = " " + text + "  "
-    text = text.replace("\n"," ")
-    text = re.sub(prefixes,"\\1<prd>",text)
-    text = re.sub(websites,"<prd>\\1",text)
-    if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")
-    text = re.sub("\s" + caps + "[.] "," \\1<prd> ",text)
-    text = re.sub(acronyms+" "+starters,"\\1<stop> \\2",text)
-    text = re.sub(caps + "[.]" + caps + "[.]" + caps + "[.]","\\1<prd>\\2<prd>\\3<prd>",text)
-    text = re.sub(caps + "[.]" + caps + "[.]","\\1<prd>\\2<prd>",text)
-    text = re.sub(" "+suffixes+"[.] "+starters," \\1<stop> \\2",text)
-    text = re.sub(" "+suffixes+"[.]"," \\1<prd>",text)
-    text = re.sub(" " + caps + "[.]"," \\1<prd>",text)
-    if "\"" in text: text = text.replace(".\"","\".")
-    if "!" in text: text = text.replace("!\"","\"!")
-    if "?" in text: text = text.replace("?\"","\"?")
-    text = text.replace(".",".<stop>")
-    text = text.replace("?","?<stop>")
-    text = text.replace("!","!<stop>")
-    text = text.replace("<prd>",".")
-    sentences = text.split("<stop>")
-    sentences = sentences[:-1]
-    sentences = [s.strip() for s in sentences]
-    return sentences
-    
-# http://stackoverflow.com/questions/743806/split-string-into-a-list-in-python/17951315#17951315
-def get_words(text):
-    return [word.strip(string.punctuation) for word in text.split()]
+import os
     
 # Extracts and necesary data for the bigram model including
 #       1. frequency of words in the corpus
@@ -48,50 +12,49 @@ def get_words(text):
 # Returns: dict named frequency where frequency[a] = # occurences of a in the corpus 
 #          dict of dict named transition, where transition[a][b] = p(b follows a | a)        
 
-def get_bigram_data(training_data):
+def get_bigram_data(training_data_folder):
+
+    print 'EXTRACTING TRAINING DATA...'
+
     frequency = {'END_OF_SENTENCE': 1}
     transition = {}
     previous_word = 'END_OF_SENTENCE'
     
-    # training data should be in readable format (ex. TAR)
-    with open(training_data) as f:
-        
-        junk = False
-        text = f.read()
-        sentences = split_into_sentences(text)
-        
-        for sentence in sentences:           
-            # remove legal text junk in the intro
-            if '*END*' in sentence:
-                junk = False
-                continue
-            
-            if junk:
-                continue
-            
-            if '\x00' in sentence:
-                junk = True
-                continue
-            
-            # http://stackoverflow.com/questions/367155/splitting-a-string-into-words-and-punctuation
-            words = get_words(sentence)
-            
-            for word in words:
-                # update frequency dictionary
-                if word not in frequency:
-                    frequency[word] = 0
-                frequency[word] += 1
+    # go through all text files in training data folder (TBTAS10.TXT, MOHIC10.TXT, ACHOE10.TXT)
+    for root, dirs, files in os.walk(training_data_folder):
+        for i, file in enumerate(files):
+            with open(os.path.join(root, file)) as f:
                 
-                # update transition dictionary
-                if word not in transition:
-                    transition[word] = {}
-                if previous_word not in transition[word]:
-                    transition[word][previous_word] = 0
-                transition[word][previous_word] += 1
+                print 'starting ' + file + ' which is file ' + str(i) + ' out of ' + str(len(files))
                 
-                previous_word = word
-            previous_word = 'END_OF_SENTENCE'
-                            
+                text = f.read()
+                
+                # TODO: Figure out why some texts are throwing errors for this
+                try:
+                    sentences = [nltk.tokenize.word_tokenize(s) for s in nltk.tokenize.sent_tokenize(text)]
+                except:
+                    print 'ERROR READING FILE'
+                    continue
+                    
+                for sentence in sentences:
+                    for word in sentence:
+                        word = word.lower()
+                        
+                        # update frequency dictionary
+                        if word not in frequency:
+                            frequency[word] = 0
+                        frequency[word] += 1
+                        
+                        # update transition dictionary
+                        if word not in transition:
+                            transition[word] = {}
+                        if previous_word not in transition[word]:
+                            transition[word][previous_word] = 0
+                        transition[word][previous_word] += 1
+                        
+                        previous_word = word
+                    previous_word = 'END_OF_SENTENCE'
+    
     for word in transition:
         for next in transition[word]:
             transition[word][next] = float(transition[word][next])/frequency[word]
@@ -107,17 +70,15 @@ def get_bigram_data(training_data):
 #   letter is an element in ['a', 'b', 'c', 'd', 'e']
 # Returns: answer dict and problem dict 
     
-def get_test_data(test_data):
+def get_test_data(test_data_folder):
+
+    print 'EXTRACTING TEST DATA...'
+
     answer = {}
     question = {}
-    
-    with open(test_data) as f:
-    
-        # skip first 20 junk lines
-        for _ in range(19):
-            next(f)
-        
-        # extract the correct answers
+
+    # extract the correct answers
+    with open(os.path.join(test_data_folder, 'Holmes.human_format.answers.txt')) as f:
         for line in f:
                 
             # first line messed up     
@@ -129,20 +90,13 @@ def get_test_data(test_data):
             q_ans = data[1][1]
             answer[q_num] = q_ans
             
-            # there are exactly 1040 questions in the test set
-            if q_num == '1040':
-                break
-        
+    with open(os.path.join(test_data_folder, 'Holmes.human_format.questions.txt')) as f:
         expecting = ('QUESTION', 1)
         q_num = 0
         
         # extract the question data
         for line in f:
-            
-            # first question line is messed up
-            if '\x00' in line:
-                line = '1) I have seen it on him , and could _____ to it.'
-            
+        
             words = line.split()
             
             # skip empty lines
@@ -167,10 +121,6 @@ def get_test_data(test_data):
                 # all five answer options were seen, look for question statement next
                 if expecting[1] == 0:
                     expecting = ('QUESTION', 1)
-                    
-                    # should stop reading after completing all 1040 test questions
-                    if q_num == '1040':
-                        break
                         
     return question, answer
     
@@ -180,6 +130,9 @@ def get_test_data(test_data):
 # Returns: percent correct, model answers
 
 def get_bigram_results(frequency, transition_prob, question, answer):
+
+    print 'COMPUTING MODEL RESULTS...'
+
     options = 'abcde'
     model_answer = {}
    
@@ -191,7 +144,7 @@ def get_bigram_results(frequency, transition_prob, question, answer):
         blank_index = words.index('_____')
         previous_word = 'END_OF_SENTENCE'
         if blank_index > 0:
-            previous_word = words[blank_index-1]
+            previous_word = words[blank_index-1].lower()
             
         # find the best option based on highest transition probability
         best_option = ''
@@ -230,6 +183,7 @@ def get_bigram_results(frequency, transition_prob, question, answer):
 
     return percent_correct, model_answer
     
-frequency, transition_prob = get_bigram_data('dataset/holmes_Training_Data.tar')
-question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1.tar')
+frequency, transition_prob = get_bigram_data('dataset/holmes_Training_Data/')
+question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/data/')
 percent_correct, model_answers = get_bigram_results(frequency, transition_prob, question, answer)
+print percent_correct
