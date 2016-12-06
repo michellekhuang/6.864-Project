@@ -23,6 +23,7 @@ def get_bigram_data(training_data_folder):
     # go through all text files in training data folder (TBTAS10.TXT, MOHIC10.TXT, ACHOE10.TXT)
     for root, dirs, files in os.walk(training_data_folder):
         for i, file in enumerate(files):
+            print os.path.join(root, file)
             with open(os.path.join(root, file)) as f:
                 
                 print 'starting ' + file + ' which is file ' + str(i) + ' out of ' + str(len(files))
@@ -80,10 +81,6 @@ def get_test_data(test_data_folder):
     # extract the correct answers
     with open(os.path.join(test_data_folder, 'Holmes.human_format.answers.txt')) as f:
         for line in f:
-                
-            # first line messed up     
-            if '\x00' in line:
-                line = '1) [d] swear'
                 
             data = line.split()
             q_num = data[0].strip(')')
@@ -183,7 +180,7 @@ def get_bigram_results(frequency, transition_prob, question, answer):
 
     return percent_correct, model_answer
     
-frequency, transition_prob = get_bigram_data('dataset/holmes_Training_Data/')
-question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/data/')
+frequency, transition_prob = get_bigram_data('dataset/Holmes_Training_Data/')
+question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
 percent_correct, model_answers = get_bigram_results(frequency, transition_prob, question, answer)
-print percent_correct
+print 'PERCENT CORRECT: ' + str(percent_correct)
