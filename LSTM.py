@@ -161,7 +161,7 @@ class SmallConfig(object):
     keep_prob = 1.0
     lr_decay = 0.5
     batch_size = 20
-    vocab_size = 10000
+    vocab_size = 60000
 
 
 class MediumConfig(object):
@@ -177,7 +177,7 @@ class MediumConfig(object):
     keep_prob = 0.5
     lr_decay = 0.8
     batch_size = 20
-    vocab_size = 10000
+    vocab_size = 60000
 
 
 class LargeConfig(object):
@@ -193,7 +193,7 @@ class LargeConfig(object):
     keep_prob = 0.35
     lr_decay = 1 / 1.15
     batch_size = 20
-    vocab_size = 10000
+    vocab_size = 60000
 
 
 class TestConfig(object):
@@ -209,7 +209,7 @@ class TestConfig(object):
     keep_prob = 1.0
     lr_decay = 0.5
     batch_size = 20
-    vocab_size = 10000
+    vocab_size = 60000
 
 
 def run_epoch(session, model, eval_op=None, verbose=False):
