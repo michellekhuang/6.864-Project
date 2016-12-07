@@ -6,9 +6,13 @@ SAT vocabulary questions involve selecting the best word or words out of the cho
 
 This project will solve these vocabulary questions by applying the ideas of n-gram models, parsing, and recurrent neural networks in order to correctly rank and identify the best solutions. In particular, we will score each option with our model and select the highest scoring answer as our solution.
 
+##Running the Code
+
+Before running the code, extract the compressed files from dataset. If you get an error while running NGram.py, make sure you have punkt installed (if not, run nltk.download() and install punkt). 
+
 ##Data/Corpora
 
-To acquire data, we will create a database of past SAT vocabulary questions and solutions. We will also use a database of all SAT vocabulary words and their definitions for our model.
+Our training data consists of text from Wall Street Journal and our test data will be multiple choice fill in the blank questions with answers to measure accuracy.
 
 ##Baselines
 

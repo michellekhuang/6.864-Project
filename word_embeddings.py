@@ -83,7 +83,7 @@ def run_word_embeddings_model():
     print 'Predicting Answers... '
 
     for i in range(1, len(question)+1):
-        print 'Predicting Q' + str(i)
+        # print 'Predicting Q' + str(i)
         q_num = str(i)
         best = find_best_answer(question[q_num], m, wmd)
         if answer[q_num] in best:
