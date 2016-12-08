@@ -14,6 +14,11 @@ Before running the code, extract the compressed files from dataset. If you get a
 
 Our training data consists of text from Wall Street Journal and our test data will be multiple choice fill in the blank questions with answers to measure accuracy.
 
+Link to download corpus: https://www.dropbox.com/s/ttne74p1jsjbzwe/LDC95T7.tgz?dl=0
+Link to download word vectors: http://aadah.me/misc/vectors.txt
+
+Corpus folders should go under /dataset and vectors.txt should be in the root folder of the files
+
 ##Baselines
 
 We will use multiple baselines to compare our results, such as random answering and average SAT test scores. We will also compare it to previous similar classifiers.
