@@ -37,20 +37,20 @@ def _read_words(filename):
     folder_name = 0
     sentences = []
     
-    for i in xrange(25):
+    for i in range(25):
         if i < 10:
             folder_name = '0' + str(i)
         else:
             folder_name = str(i)
             
         # Files 01 - 99
-        for j in xrange(1,100):
+        for j in range(1,100):
             if j < 10:
                 file_name = '0' + str(j)
             else:
                 file_name = str(j)
                 
-            with open(filename + folder_name + "/wsj_" + folder_name + file_name, 'r') as f:
+            with open(filename + folder_name + "/wsj_" + folder_name + file_name, 'r', errors='ignore') as f:
                 for line in f:
                     line = line.replace('\n', '')
                     new_line = replace_punctuation_marks(line)
@@ -79,15 +79,16 @@ def _read_test(datafolder):
 
 # fill in blank with choices
 def fill_in_choices(datafolder):
-    sentences = _read_test(datafolder)
+    question, answer = get_test_data(datafolder)
+    sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
     
     new_sentences = []
-    for i in range(len(n)):
+    for i in range(1, n):
         for choice in "abcde":
-            word_choice = answer[i][choice]
-            sentence = sentence.replace("_____", word_choice)
-
+            word_choice = question[str(i)][choice]
+            sentence = question[str(i)]['statement']
+            sentence = sentence.replace('_____', word_choice)
             # replace punctuation marks using logic above
             new_sentence = replace_punctuation_marks(sentence)
             new_sentences.extend(new_sentence)
