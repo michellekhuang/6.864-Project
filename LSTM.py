@@ -108,6 +108,7 @@ class LSTMModel(object):
         self._cost = cost = tf.reduce_sum(loss) / batch_size
         self._final_state = state
         self._proba = tf.nn.softmax(logits)
+
         if not is_training:
             return
 

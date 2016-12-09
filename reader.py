@@ -82,7 +82,7 @@ def fill_in_choices(datafolder):
     question, answer = get_test_data(datafolder)
     sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
-    
+
     new_sentences = []
     for i in range(1, n):
         for choice in "abcde":
@@ -93,7 +93,6 @@ def fill_in_choices(datafolder):
             new_sentence = replace_punctuation_marks(sentence)
             new_sentences.extend(new_sentence)
     return new_sentences
-            
 
 # print _read_test("dataset/MSR_Sentence_Completion_Challenge_V1/Data/")
 
