@@ -79,20 +79,20 @@ def _read_test(datafolder):
 
 # fill in blank with choices
 def fill_in_choices(datafolder):
-    sentences = _read_test(datafolder)
+    question, answer = get_test_data(datafolder)
+    sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
-    
-    new_sentences = []
-    for i in range(len(n)):
-        for choice in "abcde":
-            word_choice = answer[i][choice]
-            sentence = sentence.replace("_____", word_choice)
 
+    new_sentences = []
+    for i in range(1, n):
+        for choice in "abcde":
+            word_choice = question[str(i)][choice]
+            sentence = question[str(i)]['statement']
+            sentence = sentence.replace('_____', word_choice)
             # replace punctuation marks using logic above
             new_sentence = replace_punctuation_marks(sentence)
             new_sentences.extend(new_sentence)
     return new_sentences
-            
 
 # print _read_test("dataset/MSR_Sentence_Completion_Challenge_V1/Data/")
 
