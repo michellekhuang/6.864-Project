@@ -75,21 +75,19 @@ def get_test_data(test_data_folder):
     question = {}
 
     # extract the correct answers
-    with open(os.path.join(test_data_folder, 'Holmes.human_format.answers.txt'), "r",encoding='utf-8', errors='ignore') as f:
+    with open(os.path.join(test_data_folder, 'Holmes.human_format.answers.txt'), "r", encoding='utf-8', errors='ignore') as f:
         for line in f:
-                
             data = line.split()
             q_num = data[0].strip(')')
             q_ans = data[1][1]
             answer[q_num] = q_ans
             
-    with open(os.path.join(test_data_folder, 'Holmes.human_format.questions.txt'), "r",encoding='utf-8', errors='ignore') as f:
+    with open(os.path.join(test_data_folder, 'Holmes.human_format.questions.txt'), "r", encoding='utf-8', errors='ignore') as f:
         expecting = ('QUESTION', 1)
         q_num = 0
         
         # extract the question data
         for line in f:
-        
             words = line.split()
             
             # skip empty lines
