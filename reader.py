@@ -15,6 +15,8 @@
 
 # From https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/rnn/ptb/reader.py
 
+#python LSTM.py --data_path=. --model small 
+
 """Utilities for parsing text files."""
 # from __future__ import absolute_import
 # from __future__ import division
@@ -35,30 +37,35 @@ def _read_words(filename):
     folder_name = 0
     sentences = []
     
-    for i in xrange(25):
+    for i in range(25):
         if i < 10:
             folder_name = '0' + str(i)
         else:
             folder_name = str(i)
             
         # Files 01 - 99
-        for j in xrange(1,100):
+        for j in range(1,100):
             if j < 10:
                 file_name = '0' + str(j)
             else:
                 file_name = str(j)
                 
-            with open(filename + folder_name + "/wsj_" + folder_name + file_name, 'r') as f:
+            with open(filename + folder_name + "/wsj_" + folder_name + file_name, 'r', errors='ignore') as f:
                 for line in f:
                     line = line.replace('\n', '')
-                    punctuation = "!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
-                    new_line = line
-                    for char in line:
-                        if char in punctuation:
-                            new_line = new_line.replace(char, '')
+                    new_line = replace_punctuation_marks(line)
                     if new_line != 'START ' and new_line != '':
                         sentences.append(new_line)
     return sentences
+
+# return new sentence without punctuation; doesn't change original sentence
+def replace_punctuation_marks(old_sentence):
+    new_sentence = old_sentence
+    punctuation = "!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+    for char in old_sentence:
+        if char in punctuation:
+            new_sentence = new_sentence.replace(char, '')
+    return new_sentence
     
 # print _read_words("dataset/treebank2/raw/wsj/")
     
@@ -69,6 +76,23 @@ def _read_test(datafolder):
     question, answer = get_test_data(datafolder)
     sentences = [question[x]['statement'] for x in question]
     return sentences
+
+# fill in blank with choices
+def fill_in_choices(datafolder):
+    question, answer = get_test_data(datafolder)
+    sentences = [question[x]['statement'] for x in question]
+    n = len(sentences)
+
+    new_sentences = []
+    for i in range(1, n):
+        for choice in "abcde":
+            word_choice = question[str(i)][choice]
+            sentence = question[str(i)]['statement']
+            sentence = sentence.replace('_____', word_choice)
+            # replace punctuation marks using logic above
+            new_sentence = replace_punctuation_marks(sentence)
+            new_sentences.extend(new_sentence)
+    return new_sentences
 
 # print _read_test("dataset/MSR_Sentence_Completion_Challenge_V1/Data/")
 
@@ -105,7 +129,8 @@ def _file_to_word_ids(filename, word_to_id, train = True):
     if train:
         sentences = _read_words(filename)
     else:
-        sentences = _read_test(filename)
+        sentences = fill_in_choices(filename)
+        #sentences = _read_test(filename)
     data = []
     for sentence in sentences:
         data.extend(sentence.split())

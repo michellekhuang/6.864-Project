@@ -61,6 +61,7 @@ class LSTMModel(object):
         num_steps = input_.num_steps
         size = config.hidden_size
         vocab_size = config.vocab_size
+        
 
         # Slightly better results can be obtained with forget gate biases
         # initialized to 1 but the hyperparameters of the model would need to be
@@ -106,6 +107,7 @@ class LSTMModel(object):
             [tf.ones([batch_size * num_steps], dtype=data_type())])
         self._cost = cost = tf.reduce_sum(loss) / batch_size
         self._final_state = state
+        self._proba = tf.nn.softmax(logits)
 
         if not is_training:
             return
@@ -123,6 +125,10 @@ class LSTMModel(object):
     def assign_lr(self, session, lr_value):
         session.run(self._lr_update, feed_dict={self._new_lr: lr_value})
 
+    @property
+    def proba(self):
+        return self._proba
+        
     @property
     def input(self):
         return self._input
@@ -222,6 +228,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     fetches = {
             "cost": model.cost,
             "final_state": model.final_state,
+            "proba": model.proba, # added to test proba
     }
     if eval_op is not None:
         fetches["eval_op"] = eval_op
@@ -235,7 +242,9 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         vals = session.run(fetches, feed_dict)
         cost = vals["cost"]
         state = vals["final_state"]
-
+        proba = vals["proba"] # added to test proba
+        #print ("proba", proba)
+        
         costs += cost
         iters += model.input.num_steps
 
@@ -243,6 +252,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
             print("%.3f perplexity: %.3f speed: %.0f wps" %
                         (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
                          iters * model.input.batch_size / (time.time() - start_time)))
+
 
     return np.exp(costs / iters)
 
