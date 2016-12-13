@@ -85,8 +85,14 @@ def stop_at_blank(datafolder):
     for i in range(1, 2):
         sentence = question[str(i)]['statement']
         partial_sentence = sentence.split('_____')[0]
-        new_sentence = replace_punctuation_marks(partial_sentence)
-        new_sentences.extend(new_sentence)
+
+        new_sentence = ""
+        for choice in "abcde":
+            word_choice = question[str(i)][choice] + " "
+            new_sentence += word_choice
+
+        new_sentence += replace_punctuation_marks(partial_sentence)
+        new_sentences.append(new_sentence)
     return new_sentences
 
 # fill in blank with choices
