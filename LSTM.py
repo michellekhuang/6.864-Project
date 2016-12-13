@@ -52,8 +52,6 @@ class LSTMInput(object):
                 data, batch_size, num_steps, name=name)
 
 
-
-
 class LSTMModel(object):
     """The LSTM Model."""
     def __init__(self, is_training, config, input_):
@@ -107,7 +105,6 @@ class LSTMModel(object):
         
         print("output: ", output)
         
-        
         softmax_w = tf.get_variable("softmax_w", [size, vocab_size], dtype=data_type())
         softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
         logits = tf.matmul(output, softmax_w) + softmax_b
@@ -118,14 +115,6 @@ class LSTMModel(object):
         self._cost = cost = tf.reduce_sum(loss) / batch_size
         self._final_state = state
         self._proba = tf.nn.softmax(logits)
-        
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            indices = [[0], [1]]
-            result = sess.run(tf.gather_nd(self._proba, indices))
-            result2 = sess.run(self._proba)
-            print("result:", result)
-            print("result2:", result2)
         
         #print("PROBA: ", self._proba)
         #print("PROBA shape", self._proba.get_shape())
@@ -273,12 +262,8 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         print ("proba size:", np.shape(proba))
         print ("state", state)
         print ("state size: ", np.shape(state))
-        print(list(proba[0]).index(max(proba[0])))
-        print(list(proba[1]).index(max(proba[1])))
-        print(list(proba[2]).index(max(proba[2])))
-        print(list(proba[3]).index(max(proba[3])))
-        print(list(proba[4]).index(max(proba[4])))
-        print(list(proba[5]).index(max(proba[5])))
+        print("index:", list(proba[0]).index(max(proba[0])))
+         
         costs += cost
         iters += model.input.num_steps
 
@@ -305,6 +290,7 @@ def get_config():
 
 
 def main(_):
+    word_to_id = _build_vocab('dataset/treebank2/raw/wsj/')
     if not FLAGS.data_path:
         raise ValueError("Must set --data_path to LSTM data directory")
 
@@ -349,13 +335,20 @@ def main(_):
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 train_perplexity = run_epoch(session, m, eval_op=m.train_op, verbose=True)
                 print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
+
+                max_word_index = list(proba[0]).index(max(proba[0]))
+		i1, i2, i3, i4, i5 = word_to_id[choice1], word_to_id[choice2], word_to_id[choice3], word_to_id[choice4], word_to_id[choice5]
+		prob1 = session.run(m.proba)[0][i1]
+		prob2 = session.run(m.proba)[0][i2]
+		prob3 = session.run(m.proba)[0][i3]
+		prob4 = session.run(m.proba)[0][i4]
+		prob5 = session.run(m.proba)[0][i5]
+		
+                result = session.run(m.proba) #result = session.run(tf.gather_nd(m.proba, indices))
+                print("result: ", result)
+
                 # valid_perplexity = run_epoch(session, mvalid)
                 # print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
-
-                # Save model parameters at each epoch
-                # Use tf.train.Saver.restore(sess, save_path) to restore models
-                save_path = sv.saver.save(session, "./tmp/model.epoch.%03d.chkpt" % (i + 1))
-                print("Saving model to %s." % save_path)
 
             test_perplexity = run_epoch(session, mtest)
             print("Test Perplexity: %.3f" % test_perplexity)
@@ -367,3 +360,4 @@ def main(_):
 
 if __name__ == "__main__":
         tf.app.run()
+

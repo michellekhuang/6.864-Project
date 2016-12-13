@@ -77,6 +77,17 @@ def _read_test(datafolder):
     sentences = [question[x]['statement'] for x in question]
     return sentences
 
+def stop_at_blank(datafolder):
+    question, answer = get_test_data(datafolder)
+    n = len(sentences)
+    new_sentences = []    
+    for i in range(1, n):
+        sentence = question[str(i)]['statement']
+        partial_sentence = sentence.split('_____')[0]
+        new_sentence = replace_punctuation_marks(partial_sentence)
+        new_sentences.extend(new_sentence)
+    return new_sentences
+
 # fill in blank with choices
 def fill_in_choices(datafolder):
     question, answer = get_test_data(datafolder)
@@ -129,7 +140,7 @@ def _file_to_word_ids(filename, word_to_id, train = True):
     if train:
         sentences = _read_words(filename)
     else:
-        sentences = fill_in_choices(filename)
+        sentences = stop_at_blank(filename)
         #sentences = _read_test(filename)
     data = []
     for sentence in sentences:
