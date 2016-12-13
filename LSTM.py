@@ -61,6 +61,10 @@ class LSTMModel(object):
         num_steps = input_.num_steps
         size = config.hidden_size
         vocab_size = config.vocab_size
+
+        print ("vocab size: ", vocab_size)
+        print ("size: ", size)
+        print ("batch size:", batch_size)
         
 
         # Slightly better results can be obtained with forget gate biases
@@ -98,6 +102,9 @@ class LSTMModel(object):
                 outputs.append(cell_output)
 
         output = tf.reshape(tf.concat(1, outputs), [-1, size])
+
+        print("output: ", output)
+
         softmax_w = tf.get_variable("softmax_w", [size, vocab_size], dtype=data_type())
         softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
         logits = tf.matmul(output, softmax_w) + softmax_b
@@ -243,7 +250,17 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         cost = vals["cost"]
         state = vals["final_state"]
         proba = vals["proba"] # added to test proba
-        #print ("proba", proba)
+        
+        print ("proba", proba)
+        print ("proba size:", np.shape(proba))
+        print ("state", state)
+        print ("state size: ", np.shape(state))
+        print(list(proba[0]).index(max(proba[0])))
+        print(list(proba[1]).index(max(proba[1])))
+        print(list(proba[2]).index(max(proba[2])))
+        print(list(proba[3]).index(max(proba[3])))
+        print(list(proba[4]).index(max(proba[4])))
+        print(list(proba[5]).index(max(proba[5])))
         
         costs += cost
         iters += model.input.num_steps
@@ -282,6 +299,14 @@ def main(_):
     eval_config.batch_size = 1
     eval_config.num_steps = 1
 
+    # with tf.Session() as sess:
+    #         sess.run(tf.global_variables_initializer())
+    #         indices = [[0], [1]]
+    #         result = sess.run(tf.gather_nd(self._proba, indices))
+    #         result2 = sess.run(self._proba)
+    #         print("result:", result)
+    #         print("result2:", result2)
+
     with tf.Graph().as_default():
         initializer = tf.random_uniform_initializer(-config.init_scale,config.init_scale)
 
@@ -314,6 +339,11 @@ def main(_):
 
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 train_perplexity = run_epoch(session, m, eval_op=m.train_op, verbose=True)
+
+                indices = [[0], [1]]
+                result = session.run(tf.gather_nd(m.proba, indices))
+                print("result: ", result)
+
                 print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
                 # valid_perplexity = run_epoch(session, mvalid)
                 # print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
