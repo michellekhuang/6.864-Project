@@ -70,7 +70,8 @@ def find_best_answer_2(q_info, m, metric):
 def run_word_embeddings_model():
     print 'Loading Test Data...'
 
-    question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
+    #question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
+    question, answer = get_test_data('dataset/SAT_Questions/')
 
     print 'Loading Model Data...'
 
@@ -83,7 +84,7 @@ def run_word_embeddings_model():
     print 'Predicting Answers... '
 
     for i in range(1, len(question)+1):
-        # print 'Predicting Q' + str(i)
+        #print 'Predicting Q' + str(i)
         q_num = str(i)
         best = find_best_answer(question[q_num], m, wmd)
         if answer[q_num] in best:

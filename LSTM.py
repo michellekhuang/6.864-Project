@@ -352,6 +352,11 @@ def main(_):
                 # valid_perplexity = run_epoch(session, mvalid)
                 # print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
+                # Save model parameters at each epoch
+                # Use tf.train.Saver.restore(sess, save_path) to restore models
+                save_path = sv.saver.save(session, "./tmp/model.epoch.%03d.chkpt" % (i + 1))
+                print("Saving model to %s." % save_path)
+
             test_perplexity = run_epoch(session, mtest)
             print("Test Perplexity: %.3f" % test_perplexity)
 
