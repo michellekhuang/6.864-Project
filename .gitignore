@@ -9,3 +9,7 @@ dataset/LDC95T7.tgz
 nltk/
 script.sh
 slurm-*.out
+
+# Saved mode
+checkpoint
+trained_model*
