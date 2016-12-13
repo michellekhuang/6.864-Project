@@ -37,14 +37,14 @@ def _read_words(filename):
     folder_name = 0
     sentences = []
     
-    for i in range(1):
+    for i in range(10):
         if i < 10:
             folder_name = '0' + str(i)
         else:
             folder_name = str(i)
             
         # Files 01 - 99
-        for j in range(1,25):
+        for j in range(1,100):
             if j < 10:
                 file_name = '0' + str(j)
             else:
@@ -82,7 +82,7 @@ def stop_at_blank(datafolder):
     sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
     new_sentences = []    
-    for i in range(1, 2):
+    for i in range(9,10):
         sentence = question[str(i)]['statement']
         partial_sentence = sentence.split('_____')[0]
 

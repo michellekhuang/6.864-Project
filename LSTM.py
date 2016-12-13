@@ -345,23 +345,44 @@ def main(_):
                 print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
 
                 #max_word_index = list(proba[0]).index(max(proba[0]))
+                print('test sentence:', test_sentences)
                 print('choices:', choices)
-                print('word_to_id choices:', word_to_id[choices[0]])
-                i1, i2, i3, i4, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[3]], word_to_id[choices[4]]
+                #print('word_to_id choices:', word_to_id[choices[0]])
+                #i1, i2, i3, i4, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[3]], word_to_id[choices[4]]
+                word_to_ind = []
+                for c in choices:
+                    new_elem = []
+                    if c in word_to_id:
+                        new_elem = [c, word_to_id[c]]
+                    else:
+                        new_elem = [c, -1]
+                    word_to_ind.append(new_elem)
+
+                word_to_prob = []
+                for (c, ind) in word_to_ind:
+                    new_elem = []
+                    if ind == -1:
+                        new_elem = (c, 0)
+                    else:
+                        new_elem = (c, session.run(m.proba)[0][ind])
+                    word_to_prob.append(new_elem)
+
+                '''
+                #i1, i2, i3, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[4]]
                 prob1 = session.run(m.proba)[0][i1]
                 prob2 = session.run(m.proba)[0][i2]
                 prob3 = session.run(m.proba)[0][i3]
-                prob4 = session.run(m.proba)[0][i4]
+                #prob4 = session.run(m.proba)[0][i4]
                 prob5 = session.run(m.proba)[0][i5]
-                
+                '''
                 # get the answer choice that was most likely
-                word_to_prob = [(choices[0], prob1), (choices[1], prob2), (choices[2], prob3), (choices[3], prob4), (choices[4], prob5)]
+                #word_to_prob = [(choices[0], prob1), (choices[1], prob2), (choices[2], prob3), (choices[4], prob5)] #(choices[4], prob5)]
                 print("word to prob:", word_to_prob)
                 max_word = max(word_to_prob, key=lambda x: x[1])[0]
                 print("word!!", max_word)
                 
-                result = session.run(m.proba) #result = session.run(tf.gather_nd(m.proba, indices))
-                print("result: ", result)
+                #result = session.run(m.proba) #result = session.run(tf.gather_nd(m.proba, indices))
+                #print("result: ", result)
 
                 # valid_perplexity = run_epoch(session, mvalid)
                 # print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
