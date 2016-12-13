@@ -56,6 +56,7 @@ class LSTMModel(object):
     """The LSTM Model."""
     def __init__(self, is_training, config, input_):
         self._input = input_
+        self.vocab_size = config.vocab_size
 
         batch_size = input_.batch_size
         num_steps = input_.num_steps
@@ -78,7 +79,7 @@ class LSTMModel(object):
 
         self._initial_state = cell.zero_state(batch_size, data_type())
 
-        with tf.device("/gpu:0"):
+        with tf.device("/cpu:0"):
             embedding = tf.get_variable("embedding", [vocab_size, size], dtype=data_type())
             inputs = tf.nn.embedding_lookup(embedding, input_.input_data)
 
@@ -256,9 +257,9 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         vals = session.run(fetches, feed_dict)
         cost = vals["cost"]
         state = vals["final_state"]
-	# prob is n x V where n is number of sentences, V is size of vocab
+        # prob is n x V where n is number of sentences, V is size of vocab
         proba = vals["proba"] # added to test proba
-        
+
         #print ("proba", proba)
         #print ("proba size:", np.shape(proba))
         #print ("state", state)
@@ -271,8 +272,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         if verbose and step % (model.input.epoch_size // 10) == 10:
             print("%.3f perplexity: %.3f speed: %.0f wps" %
                         (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
-                         iters * model.input.batch_size / (time.time() - start_time)))
-
+                         iters * model.input.batch_size / (time.time() - start_time))
 
     return np.exp(costs / iters)
 
@@ -341,43 +341,6 @@ def main(_):
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 train_perplexity = run_epoch(session, m, eval_op=m.train_op, verbose=True)
                 print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
-
-                #max_word_index = list(proba[0]).index(max(proba[0]))
-                print('test sentence:', test_sentences)
-                print('choices:', choices)
-                #print('word_to_id choices:', word_to_id[choices[0]])
-                #i1, i2, i3, i4, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[3]], word_to_id[choices[4]]
-                word_to_ind = []
-                for c in choices:
-                    new_elem = []
-                    if c in word_to_id:
-                        new_elem = [c, word_to_id[c]]
-                    else:
-                        new_elem = [c, -1]
-                    word_to_ind.append(new_elem)
-
-                word_to_prob = []
-                for (c, ind) in word_to_ind:
-                    new_elem = []
-                    if ind == -1:
-                        new_elem = (c, 0)
-                    else:
-                        new_elem = (c, session.run(m.proba)[0][ind])
-                    word_to_prob.append(new_elem)
-
-                '''
-                #i1, i2, i3, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[4]]
-                prob1 = session.run(m.proba)[0][i1]
-                prob2 = session.run(m.proba)[0][i2]
-                prob3 = session.run(m.proba)[0][i3]
-                #prob4 = session.run(m.proba)[0][i4]
-                prob5 = session.run(m.proba)[0][i5]
-                '''
-                # get the answer choice that was most likely
-                #word_to_prob = [(choices[0], prob1), (choices[1], prob2), (choices[2], prob3), (choices[4], prob5)] #(choices[4], prob5)]
-                print("word to prob:", word_to_prob)
-                max_word = max(word_to_prob, key=lambda x: x[1])[0]
-                print("word!!", max_word)
                 
                 #result = session.run(m.proba) #result = session.run(tf.gather_nd(m.proba, indices))
                 #print("result: ", result)
@@ -386,19 +349,60 @@ def main(_):
                 # print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
             # Save model to file
-            FLAGS.save_path = './saved-models/LSTM-forward-model'
-            print("Saving model to %s." % FLAGS.save_path)
-            saver = tf.train.Saver()
-            session.run(tf.initialize_all_variables())
-            saver.save(session, FLAGS.save_path)
+            # FLAGS.save_path = './saved-models/LSTM-forward-model'
+            # print("Saving model to %s." % FLAGS.save_path)
+            # saver = tf.train.Saver()
+            # session.run(tf.initialize_all_variables())
+            # saver.save(session, FLAGS.save_path)
 
             # Load model from save file
-            saved_path = FLAGS.save_path + '.meta'
-            new_saver = tf.train.import_meta_graph(saved_path)
-            new_saver.restore(session, FLAGS.save_path)
+            # saved_path = FLAGS.save_path + '.meta'
+            # new_saver = tf.train.import_meta_graph(saved_path)
+            # new_saver.restore(session, FLAGS.save_path)
 
             test_perplexity = run_epoch(session, mtest)
             print("Test Perplexity: %.3f" % test_perplexity)
+
+            #max_word_index = list(proba[0]).index(max(proba[0]))
+            print('test sentence:', test_sentences)
+            print('choices:', choices)
+            #print('word_to_id choices:', word_to_id[choices[0]])
+            #i1, i2, i3, i4, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[3]], word_to_id[choices[4]]
+            word_to_ind = []
+            for c in choices:
+                new_elem = []
+                if c in word_to_id:
+                    new_elem = [c, word_to_id[c]]
+                else:
+                    new_elem = [c, -1]
+                word_to_ind.append(new_elem)
+
+            word_to_prob = []
+            for (c, ind) in word_to_ind:
+                new_elem = []
+                if ind == -1:
+                    new_elem = (c, 0)
+                else:
+                    new_elem = (c, session.run(mtest.proba)[0][ind])
+                word_to_prob.append(new_elem)
+
+            with open('./trained_model/test_weights.txt', mode='wt', encoding='utf-8') as weightFile:
+                weightFile.write('word_to_prob')
+                weightFile.write('\n')
+
+            '''
+            #i1, i2, i3, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[4]]
+            prob1 = session.run(m.proba)[0][i1]
+            prob2 = session.run(m.proba)[0][i2]
+            prob3 = session.run(m.proba)[0][i3]
+            #prob4 = session.run(m.proba)[0][i4]
+            prob5 = session.run(m.proba)[0][i5]
+            '''
+            # get the answer choice that was most likely
+            #word_to_prob = [(choices[0], prob1), (choices[1], prob2), (choices[2], prob3), (choices[4], prob5)] #(choices[4], prob5)]
+            print("word to prob:", word_to_prob)
+            max_word = max(word_to_prob, key=lambda x: x[1])[0]
+            print("word!!", max_word)
 
 
 if __name__ == "__main__":

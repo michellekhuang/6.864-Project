@@ -37,7 +37,7 @@ def _read_words(filename):
     folder_name = 0
     sentences = []
     
-    for i in range(10):
+    for i in range(1):
         if i < 10:
             folder_name = '0' + str(i)
         else:
