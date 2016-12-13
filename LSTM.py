@@ -102,7 +102,7 @@ class LSTMModel(object):
                 outputs.append(cell_output)
 
         output = tf.reshape(tf.concat(1, outputs), [-1, size])
-        print("output: ", output)
+        #print("output: ", output)
 
         softmax_w = tf.get_variable("softmax_w", [size, vocab_size], dtype=data_type())
         softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
@@ -220,13 +220,13 @@ class TestConfig(object):
     learning_rate = 1.0
     max_grad_norm = 1
     num_layers = 1
-    num_steps = 2
+    num_steps = 1 #2
     hidden_size = 2
     max_epoch = 1
     max_max_epoch = 1
     keep_prob = 1.0
     lr_decay = 0.5
-    batch_size = 20
+    batch_size = 1 #20
     vocab_size = 60000
 
 
@@ -247,7 +247,9 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 
     for step in range(model.input.epoch_size):
         feed_dict = {}
+        #print("initial state:", model.initial_state)
         for i, (c, h) in enumerate(model.initial_state):
+            #print("c:", c, "h: ", h)
             feed_dict[c] = state[i].c
             feed_dict[h] = state[i].h
 
@@ -257,11 +259,11 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 	# prob is n x V where n is number of sentences, V is size of vocab
         proba = vals["proba"] # added to test proba
         
-        print ("proba", proba)
-        print ("proba size:", np.shape(proba))
-        print ("state", state)
-        print ("state size: ", np.shape(state))
-        print(list(proba[0]).index(max(proba[0])))
+        #print ("proba", proba)
+        #print ("proba size:", np.shape(proba))
+        #print ("state", state)
+        #print ("state size: ", np.shape(state))
+        #print(list(proba[0]).index(max(proba[0])))
          
         costs += cost
         iters += model.input.num_steps
@@ -289,13 +291,14 @@ def get_config():
 
 
 def main(_):
-    word_to_id = _build_vocab('dataset/treebank2/raw/wsj/')
+    word_to_id = reader._build_vocab('dataset/treebank2/raw/wsj/')
     if not FLAGS.data_path:
         raise ValueError("Must set --data_path to LSTM data directory")
 
     raw_data = reader._raw_data(FLAGS.data_path)
-    train_data, test_data, _ = raw_data
-
+    train_data, train_sentences, test_data, test_sentences, _ = raw_data
+    #print("data, sentences")
+    #print(train_data[:10], train_sentences[:10], test_data[:10], test_sentences[:10])
     config = get_config()
     eval_config = get_config()
     eval_config.batch_size = 1
@@ -320,6 +323,10 @@ def main(_):
         #     tf.contrib.deprecated.scalar_summary("Validation Loss", mvalid.cost)
 
         with tf.name_scope("Test"):
+            print("test_data:", test_sentences)
+            test_data_words = test_sentences[0].split()
+            choices = test_data_words[:5] # get five choices
+            #new_test_data = ''.join(test_data_words[5:])
             test_input = LSTMInput(config=eval_config, data=test_data, name="TestInput")
             with tf.variable_scope("Model", reuse=True, initializer=initializer):
                 mtest = LSTMModel(is_training=False, config=eval_config,
@@ -334,20 +341,25 @@ def main(_):
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 train_perplexity = run_epoch(session, m, eval_op=m.train_op, verbose=True)
 
-                indices = [[0], [1]]
-                result = session.run(tf.gather_nd(m.proba, indices))
-                print("result: ", result)
-
+                
                 print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
 
-                max_word_index = list(proba[0]).index(max(proba[0]))
-		i1, i2, i3, i4, i5 = word_to_id[choice1], word_to_id[choice2], word_to_id[choice3], word_to_id[choice4], word_to_id[choice5]
-		prob1 = session.run(m.proba)[0][i1]
-		prob2 = session.run(m.proba)[0][i2]
-		prob3 = session.run(m.proba)[0][i3]
-		prob4 = session.run(m.proba)[0][i4]
-		prob5 = session.run(m.proba)[0][i5]
-		
+                #max_word_index = list(proba[0]).index(max(proba[0]))
+                print('choices:', choices)
+                print('word_to_id choices:', word_to_id[choices[0]])
+                i1, i2, i3, i4, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[3]], word_to_id[choices[4]]
+                prob1 = session.run(m.proba)[0][i1]
+                prob2 = session.run(m.proba)[0][i2]
+                prob3 = session.run(m.proba)[0][i3]
+                prob4 = session.run(m.proba)[0][i4]
+                prob5 = session.run(m.proba)[0][i5]
+                
+                # get the answer choice that was most likely
+                word_to_prob = [(choices[0], prob1), (choices[1], prob2), (choices[2], prob3), (choices[3], prob4), (choices[4], prob5)]
+                print("word to prob:", word_to_prob)
+                max_word = max(word_to_prob, key=lambda x: x[1])[0]
+                print("word!!", max_word)
+                
                 result = session.run(m.proba) #result = session.run(tf.gather_nd(m.proba, indices))
                 print("result: ", result)
 
@@ -357,9 +369,9 @@ def main(_):
             test_perplexity = run_epoch(session, mtest)
             print("Test Perplexity: %.3f" % test_perplexity)
 
-            if FLAGS.save_path:
-                print("Saving model to %s." % FLAGS.save_path)
-                sv.saver.save(session, FLAGS.save_path, global_step=sv.global_step)
+            FLAGS.save_path = 'trained_model'
+            print("Saving model to %s." % FLAGS.save_path)
+            sv.saver.save(session, FLAGS.save_path, global_step=sv.global_step)
 
 
 if __name__ == "__main__":
