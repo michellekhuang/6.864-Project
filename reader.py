@@ -37,14 +37,14 @@ def _read_words(filename):
     folder_name = 0
     sentences = []
     
-    for i in range(25):
+    for i in range(1):
         if i < 10:
             folder_name = '0' + str(i)
         else:
             folder_name = str(i)
             
         # Files 01 - 99
-        for j in range(1,100):
+        for j in range(1,25):
             if j < 10:
                 file_name = '0' + str(j)
             else:
@@ -79,9 +79,10 @@ def _read_test(datafolder):
 
 def _read_test_stop_at_blank(datafolder):
     question, answer = get_test_data(datafolder)
+    sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
     new_sentences = []    
-    for i in range(1, n):
+    for i in range(1, 2):
         sentence = question[str(i)]['statement']
         partial_sentence = sentence.split('_____')[0]
 
@@ -151,7 +152,7 @@ def _file_to_word_ids(filename, word_to_id, train = True):
     data = []
     for sentence in sentences:
         data.extend(sentence.split())
-    return [word_to_id[word] for word in data if word in word_to_id]
+    return [word_to_id[word] for word in data if word in word_to_id], sentences
 
 # Maps train and test set to the corresponding ids
 #   Parameters: data_path: path to your repo of 6.864_project (can just leave at None)
@@ -173,11 +174,11 @@ def _raw_data(data_path=None):
     test_path = "dataset/MSR_Sentence_Completion_Challenge_V1/Data/"
 
     word_to_id = _build_vocab(train_path)  
-    train_data = _file_to_word_ids(train_path, word_to_id, True)
+    train_data, train_sentences = _file_to_word_ids(train_path, word_to_id, True)
     # valid_data = _file_to_word_ids(valid_path, word_to_id)
-    test_data = _file_to_word_ids(test_path, word_to_id, False)
+    test_data, test_sentences  = _file_to_word_ids(test_path, word_to_id, False)
     vocabulary = len(word_to_id)
-    return train_data, test_data, vocabulary
+    return train_data, train_sentences, test_data, test_sentences, vocabulary
 
 #train, test, vocab = _raw_data()
 #print len(train), train[:10], len(test), test[:10], vocab
