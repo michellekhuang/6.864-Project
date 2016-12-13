@@ -340,8 +340,6 @@ def main(_):
 
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 train_perplexity = run_epoch(session, m, eval_op=m.train_op, verbose=True)
-
-                
                 print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
 
                 #max_word_index = list(proba[0]).index(max(proba[0]))
@@ -387,12 +385,20 @@ def main(_):
                 # valid_perplexity = run_epoch(session, mvalid)
                 # print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
+            # Save model to file
+            FLAGS.save_path = './saved-models/LSTM-forward-model'
+            print("Saving model to %s." % FLAGS.save_path)
+            saver = tf.train.Saver()
+            session.run(tf.initialize_all_variables())
+            saver.save(session, FLAGS.save_path)
+
+            # Load model from save file
+            saved_path = FLAGS.save_path + '.meta'
+            new_saver = tf.train.import_meta_graph(saved_path)
+            new_saver.restore(session, FLAGS.save_path)
+
             test_perplexity = run_epoch(session, mtest)
             print("Test Perplexity: %.3f" % test_perplexity)
-
-            FLAGS.save_path = 'trained_model'
-            print("Saving model to %s." % FLAGS.save_path)
-            sv.saver.save(session, FLAGS.save_path, global_step=sv.global_step)
 
 
 if __name__ == "__main__":
