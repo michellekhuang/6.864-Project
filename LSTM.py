@@ -102,9 +102,8 @@ class LSTMModel(object):
                 outputs.append(cell_output)
 
         output = tf.reshape(tf.concat(1, outputs), [-1, size])
-        
         print("output: ", output)
-        
+
         softmax_w = tf.get_variable("softmax_w", [size, vocab_size], dtype=data_type())
         softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
         logits = tf.matmul(output, softmax_w) + softmax_b
@@ -262,7 +261,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         print ("proba size:", np.shape(proba))
         print ("state", state)
         print ("state size: ", np.shape(state))
-        print("index:", list(proba[0]).index(max(proba[0])))
+        print(list(proba[0]).index(max(proba[0])))
          
         costs += cost
         iters += model.input.num_steps
@@ -334,6 +333,11 @@ def main(_):
 
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 train_perplexity = run_epoch(session, m, eval_op=m.train_op, verbose=True)
+
+                indices = [[0], [1]]
+                result = session.run(tf.gather_nd(m.proba, indices))
+                print("result: ", result)
+
                 print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
 
                 max_word_index = list(proba[0]).index(max(proba[0]))
