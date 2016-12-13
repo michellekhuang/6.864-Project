@@ -77,7 +77,7 @@ def _read_test(datafolder):
     sentences = [question[x]['statement'] for x in question]
     return sentences
 
-def stop_at_blank(datafolder):
+def _read_test_stop_at_blank(datafolder):
     question, answer = get_test_data(datafolder)
     n = len(sentences)
     new_sentences = []    
@@ -146,7 +146,7 @@ def _file_to_word_ids(filename, word_to_id, train = True):
     if train:
         sentences = _read_words(filename)
     else:
-        sentences = stop_at_blank(filename)
+        sentences = _read_test_stop_at_blank(filename)
         #sentences = _read_test(filename)
     data = []
     for sentence in sentences:
