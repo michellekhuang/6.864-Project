@@ -82,7 +82,7 @@ def stop_at_blank(datafolder):
     sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
     new_sentences = []    
-    for i in range(9,10):
+    for i in range(10,11):
         sentence = question[str(i)]['statement']
         partial_sentence = sentence.split('_____')[0]
 
