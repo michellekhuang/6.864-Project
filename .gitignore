@@ -2,3 +2,10 @@ mnist_softmax.py
 dataset/Holmes_Training_Data
 dataset/MSR_Sentence_Completion_Challenge_V1/
 dataset/treebank2/
+
+# OpenMind files
+__pycache__/
+dataset/LDC95T7.tgz
+nltk/
+script.sh
+slurm-*.out

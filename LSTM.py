@@ -52,6 +52,8 @@ class LSTMInput(object):
                 data, batch_size, num_steps, name=name)
 
 
+
+
 class LSTMModel(object):
     """The LSTM Model."""
     def __init__(self, is_training, config, input_):
@@ -61,6 +63,10 @@ class LSTMModel(object):
         num_steps = input_.num_steps
         size = config.hidden_size
         vocab_size = config.vocab_size
+
+        print ("vocab size: ", vocab_size)
+        print ("size: ", size)
+        print ("batch size:", batch_size)
         
 
         # Slightly better results can be obtained with forget gate biases
@@ -74,7 +80,7 @@ class LSTMModel(object):
 
         self._initial_state = cell.zero_state(batch_size, data_type())
 
-        with tf.device("/cpu:0"):
+        with tf.device("/gpu:0"):
             embedding = tf.get_variable("embedding", [vocab_size, size], dtype=data_type())
             inputs = tf.nn.embedding_lookup(embedding, input_.input_data)
 
@@ -98,6 +104,10 @@ class LSTMModel(object):
                 outputs.append(cell_output)
 
         output = tf.reshape(tf.concat(1, outputs), [-1, size])
+        
+        print("output: ", output)
+        
+        
         softmax_w = tf.get_variable("softmax_w", [size, vocab_size], dtype=data_type())
         softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
         logits = tf.matmul(output, softmax_w) + softmax_b
@@ -108,7 +118,21 @@ class LSTMModel(object):
         self._cost = cost = tf.reduce_sum(loss) / batch_size
         self._final_state = state
         self._proba = tf.nn.softmax(logits)
-
+        
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            indices = [[0], [1]]
+            result = sess.run(tf.gather_nd(self._proba, indices))
+            result2 = sess.run(self._proba)
+            print("result:", result)
+            print("result2:", result2)
+        
+        #print("PROBA: ", self._proba)
+        #print("PROBA shape", self._proba.get_shape())
+        #indices = [[0], [1]]
+        #print("values: ", tf.gather_nd(self._proba, indices))
+        #print("INDEX:", list(self._proba.eval(session=se[0]).index(max(self._proba.eval(session=sess)[0])))
+        #print('logits shape:', logits.shape()) 
         if not is_training:
             return
 
@@ -242,9 +266,19 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         vals = session.run(fetches, feed_dict)
         cost = vals["cost"]
         state = vals["final_state"]
+	# prob is n x V where n is number of sentences, V is size of vocab
         proba = vals["proba"] # added to test proba
-        #print ("proba", proba)
         
+        print ("proba", proba)
+        print ("proba size:", np.shape(proba))
+        print ("state", state)
+        print ("state size: ", np.shape(state))
+        print(list(proba[0]).index(max(proba[0])))
+        print(list(proba[1]).index(max(proba[1])))
+        print(list(proba[2]).index(max(proba[2])))
+        print(list(proba[3]).index(max(proba[3])))
+        print(list(proba[4]).index(max(proba[4])))
+        print(list(proba[5]).index(max(proba[5])))
         costs += cost
         iters += model.input.num_steps
 
