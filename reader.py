@@ -1,21 +1,6 @@
-# Copyright 2015 The TensorFlow Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
+# References: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/rnn/ptb/reader.py
 
-# From https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/rnn/ptb/reader.py
-
-#python LSTM.py --data_path=. --model small 
+# python LSTM.py --data_path=. --model small --bidirectional True
 
 """Utilities for parsing text files."""
 # from __future__ import absolute_import
@@ -31,7 +16,7 @@ import tensorflow as tf
 # Goes through the WSJ corpus and reads all of the sentences
 #   Parameters: path of folder of the wsj corpus
 #   Returns: list of sentences
-def _read_words(filename):
+def _read_words(filename, bidirectional):
 
     # Folders in wsj 00 - 24
     folder_name = 0
@@ -55,17 +40,27 @@ def _read_words(filename):
                     line = line.replace('\n', '')
                     new_line = replace_punctuation_marks(line)
                     if new_line != 'START ' and new_line != '':
-                        sentences.append(new_line)
+                        if bidirectional:
+                            sentences.append(reverse_words_in_string(new_line))
+                        else:
+                            sentences.append(new_line)
+
     return sentences
 
 # return new sentence without punctuation; doesn't change original sentence
 def replace_punctuation_marks(old_sentence):
     new_sentence = old_sentence
-    punctuation = "!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+    punctuation = "!\"#$%&()*+,-./:;<=>?@[\]^_`{|}~"
     for char in old_sentence:
         if char in punctuation:
             new_sentence = new_sentence.replace(char, '')
     return new_sentence
+
+# reverses words in a sentence string
+def reverse_words_in_string(sentence):
+    sentence_list = sentence.split()
+    sentence_list.reverse()
+    return ' '.join(sentence_list)
     
 # print _read_words("dataset/treebank2/raw/wsj/")
     
@@ -77,23 +72,30 @@ def _read_test(datafolder):
     sentences = [question[x]['statement'] for x in question]
     return sentences
 
-# returns sentence with first 5 answer choices with the rest of the sentence
-def _read_test_stop_at_blank(datafolder):
+# returns tuple:
+#     sentence with first 5 answer choices with sentence from beginning to blank
+#     sentence with first 5 answer choices with reversed sentence from end to blank
+def _read_test_stop_at_blank(datafolder, bidirectional=False):
     question, answer = get_test_data(datafolder)
     sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
     new_sentences = []
     for i in range(1, len(question) + 1):
         sentence = question[str(i)]['statement']
-        partial_sentence = sentence.split('_____')[0]
+        forward_sentence, backward_sentence = sentence.split('_____')
 
-        new_sentence = ""
+        word_choices = ""
         for choice in "abcde":
             word_choice = question[str(i)][choice] + " "
-            new_sentence += word_choice
+            word_choices += word_choice
 
-        new_sentence += replace_punctuation_marks(partial_sentence)
-        new_sentences.append(new_sentence)
+        if bidirectional:
+            reversed_backward_sentence = reverse_words_in_string(replace_punctuation_marks(backward_sentence))
+            new_reversed_backward_sentence = word_choices + reversed_backward_sentence
+            new_sentences.append(new_reversed_backward_sentence)
+        else:
+            new_forward_sentence = word_choices + replace_punctuation_marks(forward_sentence)
+            new_sentences.append(new_forward_sentence)
     return new_sentences
 
 # fill in blank with choices
@@ -119,7 +121,7 @@ def fill_in_choices(datafolder):
 #   Parameters: filename of document to be read
 #   Returns: dictionary of unique words mapped to an integer id
 def _build_vocab(filename):
-    sentences = _read_words(filename)
+    sentences = _read_words(filename, bidirectional=False)
     data = []
     for sentence in sentences:
         data.extend(sentence.split())
@@ -143,14 +145,13 @@ def _build_vocab(filename):
 #               train boolean determining whether or not this is the training set
 #   Returns: list with integers representing the mapping of words to their ids
 #            list of sentences still in letter form
-def _file_to_word_ids(filename, word_to_id, train = True):
+def _file_to_word_ids(filename, word_to_id, train=True, bidirectional=False):
     """ Return list of indices for each word to the counts tuple """
     sentences = []
     if train:
-        sentences = _read_words(filename)
+        sentences = _read_words(filename, bidirectional)
     else:
-        sentences = _read_test_stop_at_blank(filename)
-        #sentences = _read_test(filename)
+        sentences = _read_test_stop_at_blank(filename, bidirectional)
     data = []
     for sentence in sentences:
         data.extend(sentence.split())
@@ -159,7 +160,7 @@ def _file_to_word_ids(filename, word_to_id, train = True):
 # Maps train and test set to the corresponding ids
 #   Parameters: data_path: path to your repo of 6.864_project (can just leave at None)
 #   Returns: Mapped version of train data, test data, and the length of the vocabulary
-def _raw_data(data_path=None):
+def _raw_data(data_path=None, bidirectional=False):
     """Load training/test raw data from data directory "data_path".
     Reads text files, converts strings to integer ids,
     and performs mini-batching of the inputs.
@@ -175,8 +176,8 @@ def _raw_data(data_path=None):
     question, answer = get_test_data(test_path)
 
     word_to_id = _build_vocab(train_path)  
-    train_data, train_sentences, train_data_in_list_of_lists = _file_to_word_ids(train_path, word_to_id, True)
-    test_data, test_sentences, test_data_in_list_of_lists  = _file_to_word_ids(test_path, word_to_id, False)
+    train_data, train_sentences, train_data_in_list_of_lists = _file_to_word_ids(train_path, word_to_id, True, bidirectional)
+    test_data, test_sentences, test_data_in_list_of_lists  = _file_to_word_ids(test_path, word_to_id, False, bidirectional)
     vocabulary = len(word_to_id)
     return word_to_id, train_data, test_sentences, test_data_in_list_of_lists, question, answer
 

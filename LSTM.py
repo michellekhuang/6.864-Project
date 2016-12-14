@@ -1,19 +1,4 @@
-# Copyright 2015 The TensorFlow Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-#
-# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/rnn/ptb/ptb_word_lm.py
+# References: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/rnn/ptb/ptb_word_lm.py
 
 from __future__ import absolute_import
 from __future__ import division
@@ -34,9 +19,9 @@ flags.DEFINE_string("model", "small",
 flags.DEFINE_string("data_path", None, "Where the training/test data is stored.")
 flags.DEFINE_string("save_path", None, "Model output directory.")
 flags.DEFINE_bool("use_fp16", False, "Train using 16-bit floats instead of 32bit floats")
+flags.DEFINE_bool("bidirectional", False, "Train using bidirectional LSTM model.")
 
 FLAGS = flags.FLAGS
-
 
 def data_type():
   return tf.float16 if FLAGS.use_fp16 else tf.float32
@@ -54,14 +39,16 @@ class LSTMInput(object):
 
 class LSTMModel(object):
     """The LSTM Model."""
-    def __init__(self, is_training, config, input_):
+    def __init__(self, is_training, config, input_, bidirectional=False):
         self._input = input_
-        self.vocab_size = config.vocab_size
 
         batch_size = input_.batch_size
         num_steps = input_.num_steps
         size = config.hidden_size
         vocab_size = config.vocab_size
+
+        if bidirectional:
+            print("Using bidirectional LSTM")
 
         # Slightly better results can be obtained with forget gate biases
         # initialized to 1 but the hyperparameters of the model would need to be
@@ -111,12 +98,6 @@ class LSTMModel(object):
         self._final_state = state
         self._proba = tf.nn.softmax(logits)
         
-        #print("PROBA: ", self._proba)
-        #print("PROBA shape", self._proba.get_shape())
-        #indices = [[0], [1]]
-        #print("values: ", tf.gather_nd(self._proba, indices))
-        #print("INDEX:", list(self._proba.eval(session=se[0]).index(max(self._proba.eval(session=sess)[0])))
-        #print('logits shape:', logits.shape()) 
         if not is_training:
             return
 
@@ -285,19 +266,19 @@ def find_answer_probs(session, model, answer_words, word_to_id):
         answers.append((letter, answer_words[i], word_id, prob))
     return answers
         
-def create_test_tensor(sentence_test_data, eval_config, initializer):
+def create_test_tensor(sentence_test_data, eval_config, initializer, bidirectional):
     with tf.name_scope("Test"):
         test_input = LSTMInput(config=eval_config, data=sentence_test_data, name="TestInput")
         with tf.variable_scope("Model", reuse=True, initializer=initializer):
             test_model = LSTMModel(is_training=False, config=eval_config,
-                                             input_=test_input)
+                                             input_=test_input, bidirectional=bidirectional)
     return test_model
 
 def main(_):
     if not FLAGS.data_path:
         raise ValueError("Must set --data_path to LSTM data directory")
 
-    raw_data = reader._raw_data(FLAGS.data_path)
+    raw_data = reader._raw_data(FLAGS.data_path, FLAGS.bidirectional)
     word_to_id, train_data, test_sentences, test_data_in_list_of_lists, question, answer = raw_data
     config = get_config()
     eval_config = get_config()
@@ -308,9 +289,7 @@ def main(_):
         with tf.name_scope("Train"):
             train_input = LSTMInput(config=config, data=train_data, name="TrainInput")
             with tf.variable_scope("Model", reuse=None, initializer=initializer):
-                m = LSTMModel(is_training=True, config=config, input_=train_input)
-            # tf.contrib.deprecated.scalar_summary("Training Loss", m.cost)
-            # tf.contrib.deprecated.scalar_summary("Learning Rate", m.lr)
+                m = LSTMModel(is_training=True, config=config, input_=train_input, bidirectional=FLAGS.bidirectional)
             tf.summary.scalar("Training Loss", m.cost)
             tf.summary.scalar("Learning Rate", m.lr)
         
@@ -321,14 +300,8 @@ def main(_):
             if len(test_data_in_list_of_lists[i]) < 2:
                 mtests.append(None)
             else:
-                new_test = create_test_tensor(test_data_in_list_of_lists[i], eval_config, initializer)
+                new_test = create_test_tensor(test_data_in_list_of_lists[i], eval_config, initializer, bidirectional=FLAGS.bidirectional)
                 mtests.append(new_test)
-            
-        # with tf.name_scope("Valid"):
-        #     valid_input = LSTMInput(config=config, data=valid_data, name="ValidInput")
-        #     with tf.variable_scope("Model", reuse=True, initializer=initializer):
-        #         mvalid = LSTMModel(is_training=False, config=config, input_=valid_input)
-        #     tf.contrib.deprecated.scalar_summary("Validation Loss", mvalid.cost)
 
         sv = tf.train.Supervisor(logdir=FLAGS.save_path)
 
