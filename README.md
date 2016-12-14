@@ -8,7 +8,33 @@ This project will solve these vocabulary questions by applying the ideas of n-gr
 
 ##Running the Code
 
-Before running the code, extract the compressed files from dataset. If you get an error while running NGram.py, make sure you have punkt installed (if not, run nltk.download() and install punkt). 
+Before running the code, extract the compressed files from dataset. If you get an error while running NGram.py, make sure you have punkt installed (if not, run nltk.download() and install punkt). These are included in the dataset/ directory.
+
+### Dependencies
+Python3
+brew install python3
+NumPy
+pip3 install numpy
+NLTK
+pip3 install nltk
+
+### n-Gram Model
+To run the n-gram model, use the command
+python3 NGram.py
+
+### Word Embeddings Model
+To run the word embeddings model, use the command
+python3 word_embeddings.py
+
+### LSTM Model
+To run the forward (one-directional) LSTM model, use the command
+python3 LSTM.py --data_path=. --model test
+The "model" flag may be any of small, medium, large, or test. We recommend running test (a very small configuration) for time purposes.
+
+To run the LSTM in the backward direction, use the command
+python3 LSTM.py --data_path=. --modell test --bidirectional True
+
+Running the LSTM model will save the output in two text files, forward_out_<dataset>.txt or backward_out_<dataset>.txt.
 
 ##Data/Corpora
 

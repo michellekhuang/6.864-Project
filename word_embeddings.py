@@ -68,12 +68,12 @@ def find_best_answer_2(q_info, m, metric):
     return answers[best_index]
 
 def run_word_embeddings_model():
-    print 'Loading Test Data...'
+    print('Loading Test Data...')
 
     #question, answer = get_test_data('dataset/MSR_Sentence_Completion_Challenge_V1/Data/')
     question, answer = get_test_data('dataset/SAT_Questions/')
 
-    print 'Loading Model Data...'
+    print('Loading Model Data...')
 
     m = Model('./vectors.txt')
     m.load()
@@ -81,10 +81,10 @@ def run_word_embeddings_model():
     right = 0.0
     wrong = 0.0
 
-    print 'Predicting Answers... '
+    print('Predicting Answers... ')
 
     for i in range(1, len(question)+1):
-        #print 'Predicting Q' + str(i)
+        #print('Predicting Q' + str(i))
         q_num = str(i)
         best = find_best_answer(question[q_num], m, wmd)
         if answer[q_num] in best:
@@ -92,7 +92,7 @@ def run_word_embeddings_model():
         else:
             wrong += 1
         
-    print 'The accuracy is ' + str(right/(right + wrong))
+    print('The accuracy is ' + str(right/(right + wrong)))
 
 if __name__ == '__main__':
     run_word_embeddings_model()
