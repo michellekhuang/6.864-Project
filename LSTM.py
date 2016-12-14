@@ -168,13 +168,13 @@ class SmallConfig(object):
     learning_rate = 1.0
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 20
+    num_steps = 1
     hidden_size = 200
     max_epoch = 4
     max_max_epoch = 13
     keep_prob = 1.0
     lr_decay = 0.5
-    batch_size = 20
+    batch_size = 1
     vocab_size = 60000
 
 
@@ -184,13 +184,13 @@ class MediumConfig(object):
     learning_rate = 1.0
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 35
+    num_steps = 1
     hidden_size = 650
     max_epoch = 6
     max_max_epoch = 39
     keep_prob = 0.5
     lr_decay = 0.8
-    batch_size = 20
+    batch_size = 1
     vocab_size = 60000
 
 
@@ -200,13 +200,13 @@ class LargeConfig(object):
     learning_rate = 1.0
     max_grad_norm = 10
     num_layers = 2
-    num_steps = 35
+    num_steps = 1
     hidden_size = 1500
     max_epoch = 14
     max_max_epoch = 55
     keep_prob = 0.35
     lr_decay = 1 / 1.15
-    batch_size = 20
+    batch_size = 1
     vocab_size = 60000
 
 
@@ -272,22 +272,20 @@ def get_config():
 # given the sentence (in words) and sentence (in numbers) where the first 5 words are answer options abc
 # finds the best answer choice from the model
 # returns best answer as tuple (letter, word, word_id, probability)
-def find_best_answer(session, model, answer_words, word_to_id):
+def find_answer_probs(session, model, answer_words, word_to_id):
     answers = []
     choices = 'abcde'
     for i in range(5):
         prob = 0
         letter = choices[i]
-        word_id = -1
+        word_id = 0
         if answer_words[i] in word_to_id:
             word_id = word_to_id[answer_words[i]]
             prob = session.run(model.proba)[0][word_id]
         answers.append((letter, answer_words[i], word_id, prob))
-    print(answers)
-    return max(answers, key=lambda x: x[3])
+    return answers
         
 def create_test_tensor(sentence_test_data, eval_config, initializer):
-    print(sentence_test_data)
     with tf.name_scope("Test"):
         test_input = LSTMInput(config=eval_config, data=sentence_test_data, name="TestInput")
         with tf.variable_scope("Model", reuse=True, initializer=initializer):
@@ -344,22 +342,37 @@ def main(_):
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 run_epoch(session, m, eval_op=m.train_op, verbose=True)
             
-            num_correct = 0.0
-            for i in range(len(test_sentences)):
-                mtest = mtests[i]
-                if mtest is None:
-                    print('Not enough info skipping question', i)
-                    continue
-                run_epoch(session, mtest)
-                ans = find_best_answer(session, mtest, test_sentences[i].split()[0:5], word_to_id)
-                print('Best answer')
-                print(ans)
-                print('Correct answer')
-                print('Answer to problem', i+1, 'is', answer[str(i+1)])
-                if ans[0] == answer[str(i+1)]:
-                    num_correct += 1
-            print()
-            print('Accuracy is', num_correct/len(test_sentences))
+            with open('forward_out.txt', 'w') as f:
+                num_correct = 0.0
+                for i in range(len(test_sentences)):
+                    mtest = mtests[i]
+                    if mtest is None:
+                        print('Not enough info skipping question', i)
+                        continue
+                    run_epoch(session, mtest)
+                    choices = find_answer_probs(session, mtest, test_sentences[i].split()[0:5], word_to_id)
+                    
+                    f.write(str(i) + ' ')
+                    
+                    for choice in choices:
+                        f.write(str(choice[3]) + ' ')
+                    
+                    f.write('\n')
+                        
+                    best_answer = max(choices, key=lambda x: x[3])
+                    print('Best answer')
+                    print(best_answer)
+                    print('Correct answer')
+                    print('Answer to problem', i+1, 'is', answer[str(i+1)])
+                    if best_answer[0] == answer[str(i+1)]:
+                        num_correct += 1
+                        
+                f.write('\n')
+                
+                f.write('Accuracy: ' + str(num_correct/len(test_sentences)))
+                        
+                print()
+                print('Accuracy is', num_correct/len(test_sentences))
 
 
 if __name__ == "__main__":

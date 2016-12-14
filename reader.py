@@ -37,14 +37,14 @@ def _read_words(filename):
     folder_name = 0
     sentences = []
     
-    for i in range(1):
+    for i in range(25):
         if i < 10:
             folder_name = '0' + str(i)
         else:
             folder_name = str(i)
             
         # Files 01 - 99
-        for j in range(1,25):
+        for j in range(1,100):
             if j < 10:
                 file_name = '0' + str(j)
             else:
@@ -94,7 +94,7 @@ def _read_test_stop_at_blank(datafolder):
 
         new_sentence += replace_punctuation_marks(partial_sentence)
         new_sentences.append(new_sentence)
-    return new_sentences[:200]
+    return new_sentences[:100]
 
 # fill in blank with choices
 def fill_in_choices(datafolder):
