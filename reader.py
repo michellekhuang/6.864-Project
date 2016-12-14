@@ -172,7 +172,7 @@ def _raw_data(data_path=None, backwards=False):
         where each of the data objects can be passed to Iterator.
     """
     train_path = "dataset/treebank2/raw/wsj/"
-    test_path = "dataset/MSR_Sentence_Completion_Challenge_V1/Data"
+    test_path = "dataset/SAT_Questions/"
     question, answer = get_test_data(test_path)
 
     word_to_id = _build_vocab(train_path)  
