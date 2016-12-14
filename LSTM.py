@@ -62,11 +62,6 @@ class LSTMModel(object):
         size = config.hidden_size
         vocab_size = config.vocab_size
 
-        print ("vocab size: ", vocab_size)
-        print ("size: ", size)
-        print ("batch size:", batch_size)
-        
-
         # Slightly better results can be obtained with forget gate biases
         # initialized to 1 but the hyperparameters of the model would need to be
         # different than reported in the paper.
@@ -78,7 +73,7 @@ class LSTMModel(object):
 
         self._initial_state = cell.zero_state(batch_size, data_type())
 
-        with tf.device("/gpu:0"):
+        with tf.device("/cpu:0"):
             embedding = tf.get_variable("embedding", [vocab_size, size], dtype=data_type())
             inputs = tf.nn.embedding_lookup(embedding, input_.input_data)
 
@@ -247,34 +242,17 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 
     for step in range(model.input.epoch_size):
         feed_dict = {}
-        #print("initial state:", model.initial_state)
         for i, (c, h) in enumerate(model.initial_state):
-            #print("c:", c, "h: ", h)
             feed_dict[c] = state[i].c
             feed_dict[h] = state[i].h
 
         vals = session.run(fetches, feed_dict)
         cost = vals["cost"]
         state = vals["final_state"]
-	# prob is n x V where n is number of sentences, V is size of vocab
         proba = vals["proba"] # added to test proba
-        
-        #print ("proba", proba)
-        #print ("proba size:", np.shape(proba))
-        #print ("state", state)
-        #print ("state size: ", np.shape(state))
-        #print(list(proba[0]).index(max(proba[0])))
-         
-        costs += cost
-        iters += model.input.num_steps
-
-        if verbose and step % (model.input.epoch_size // 10) == 10:
-            print("%.3f perplexity: %.3f speed: %.0f wps" %
-                        (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
-                         iters * model.input.batch_size / (time.time() - start_time)))
-
-
-    return np.exp(costs / iters)
+        if model.input.epoch_size != 0:
+            if verbose and step % (model.input.epoch_size // 25) == 10:
+                print("Progress is %.3f, data size is %.3f" % (step * 1.0 / model.input.epoch_size, model.input.epoch_size))
 
 
 def get_config():
@@ -289,6 +267,31 @@ def get_config():
     else:
         raise ValueError("Invalid model: %s", FLAGS.model)
 
+# given the sentence (in words) and sentence (in numbers) where the first 5 words are answer options abc
+# finds the best answer choice from the model
+# returns best answer as tuple (letter, word, word_id, probability)
+def find_best_answer(session, model, answer_words, word_to_id):
+    answers = []
+    choices = 'abcde'
+    for i in range(5):
+        prob = 0
+        letter = choices[i]
+        word_id = -1
+        if answer_words[i] in word_to_id:
+            word_id = word_to_id[answer_words[i]]
+            prob = session.run(model.proba)[0][word_id]
+        answers.append((letter, answer_words[i], word_id, prob))
+    print(answers)
+    return max(answers, key=lambda x: x[3])
+        
+def create_test_tensor(sentence_test_data, eval_config, initializer):
+    print(sentence_test_data)
+    with tf.name_scope("Test"):
+        test_input = LSTMInput(config=eval_config, data=sentence_test_data, name="TestInput")
+        with tf.variable_scope("Model", reuse=True, initializer=initializer):
+            test_model = LSTMModel(is_training=False, config=eval_config,
+                                             input_=test_input)
+    return test_model
 
 def main(_):
     word_to_id = reader._build_vocab('dataset/treebank2/raw/wsj/')
@@ -296,13 +299,9 @@ def main(_):
         raise ValueError("Must set --data_path to LSTM data directory")
 
     raw_data = reader._raw_data(FLAGS.data_path)
-    train_data, train_sentences, test_data, test_sentences, _ = raw_data
-    #print("data, sentences")
-    #print(train_data[:10], train_sentences[:10], test_data[:10], test_sentences[:10])
+    word_to_id, train_data, test_sentences, test_data_in_list_of_lists, question, answer = raw_data
     config = get_config()
     eval_config = get_config()
-    eval_config.batch_size = 1
-    eval_config.num_steps = 1
 
     with tf.Graph().as_default():
         initializer = tf.random_uniform_initializer(-config.init_scale,config.init_scale)
@@ -315,90 +314,50 @@ def main(_):
             # tf.contrib.deprecated.scalar_summary("Learning Rate", m.lr)
             tf.summary.scalar("Training Loss", m.cost)
             tf.summary.scalar("Learning Rate", m.lr)
-
+        
+        mtests = []
+        for i in range(len(test_sentences)):
+            print('Creating test tensor', i)
+            # can't run through RNN because not enough values
+            if len(test_data_in_list_of_lists[i]) < 2:
+                mtests.append(None)
+            else:
+                new_test = create_test_tensor(test_data_in_list_of_lists[i], eval_config, initializer)
+                mtests.append(new_test)
+            
         # with tf.name_scope("Valid"):
         #     valid_input = LSTMInput(config=config, data=valid_data, name="ValidInput")
         #     with tf.variable_scope("Model", reuse=True, initializer=initializer):
         #         mvalid = LSTMModel(is_training=False, config=config, input_=valid_input)
         #     tf.contrib.deprecated.scalar_summary("Validation Loss", mvalid.cost)
 
-        with tf.name_scope("Test"):
-            print("test_data:", test_sentences)
-            test_data_words = test_sentences[0].split()
-            choices = test_data_words[:5] # get five choices
-            #new_test_data = ''.join(test_data_words[5:])
-            test_input = LSTMInput(config=eval_config, data=test_data, name="TestInput")
-            with tf.variable_scope("Model", reuse=True, initializer=initializer):
-                mtest = LSTMModel(is_training=False, config=eval_config,
-                                                 input_=test_input)
-
         sv = tf.train.Supervisor(logdir=FLAGS.save_path)
+
         with sv.managed_session() as session:
+
             for i in range(config.max_max_epoch):
                 lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
                 m.assign_lr(session, config.learning_rate * lr_decay)
 
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
-                train_perplexity = run_epoch(session, m, eval_op=m.train_op, verbose=True)
-                print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
-
-                #max_word_index = list(proba[0]).index(max(proba[0]))
-                print('test sentence:', test_sentences)
-                print('choices:', choices)
-                #print('word_to_id choices:', word_to_id[choices[0]])
-                #i1, i2, i3, i4, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[3]], word_to_id[choices[4]]
-                word_to_ind = []
-                for c in choices:
-                    new_elem = []
-                    if c in word_to_id:
-                        new_elem = [c, word_to_id[c]]
-                    else:
-                        new_elem = [c, -1]
-                    word_to_ind.append(new_elem)
-
-                word_to_prob = []
-                for (c, ind) in word_to_ind:
-                    new_elem = []
-                    if ind == -1:
-                        new_elem = (c, 0)
-                    else:
-                        new_elem = (c, session.run(m.proba)[0][ind])
-                    word_to_prob.append(new_elem)
-
-                '''
-                #i1, i2, i3, i5 = word_to_id[choices[0]], word_to_id[choices[1]], word_to_id[choices[2]], word_to_id[choices[4]]
-                prob1 = session.run(m.proba)[0][i1]
-                prob2 = session.run(m.proba)[0][i2]
-                prob3 = session.run(m.proba)[0][i3]
-                #prob4 = session.run(m.proba)[0][i4]
-                prob5 = session.run(m.proba)[0][i5]
-                '''
-                # get the answer choice that was most likely
-                #word_to_prob = [(choices[0], prob1), (choices[1], prob2), (choices[2], prob3), (choices[4], prob5)] #(choices[4], prob5)]
-                print("word to prob:", word_to_prob)
-                max_word = max(word_to_prob, key=lambda x: x[1])[0]
-                print("word!!", max_word)
-                
-                #result = session.run(m.proba) #result = session.run(tf.gather_nd(m.proba, indices))
-                #print("result: ", result)
-
-                # valid_perplexity = run_epoch(session, mvalid)
-                # print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
-
-            # Save model to file
-            FLAGS.save_path = './saved-models/LSTM-forward-model'
-            print("Saving model to %s." % FLAGS.save_path)
-            saver = tf.train.Saver()
-            session.run(tf.initialize_all_variables())
-            saver.save(session, FLAGS.save_path)
-
-            # Load model from save file
-            saved_path = FLAGS.save_path + '.meta'
-            new_saver = tf.train.import_meta_graph(saved_path)
-            new_saver.restore(session, FLAGS.save_path)
-
-            test_perplexity = run_epoch(session, mtest)
-            print("Test Perplexity: %.3f" % test_perplexity)
+                run_epoch(session, m, eval_op=m.train_op, verbose=True)
+            
+            num_correct = 0.0
+            for i in range(len(test_sentences)):
+                mtest = mtests[i]
+                if mtest is None:
+                    print('Not enough info skipping question', i)
+                    continue
+                run_epoch(session, mtest)
+                ans = find_best_answer(session, mtest, test_sentences[i].split()[0:5], word_to_id)
+                print('best answer')
+                print(ans)
+                print('correct answer')
+                print('Answer to problem', i+1, 'is', answer[str(i+1)])
+                if ans[0] == answer[str(i+1)]:
+                    num_correct += 1
+            print()
+            print('Accuracy is', num_correct/len(test_sentences))
 
 
 if __name__ == "__main__":

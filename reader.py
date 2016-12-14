@@ -37,14 +37,14 @@ def _read_words(filename):
     folder_name = 0
     sentences = []
     
-    for i in range(10):
+    for i in range(1):
         if i < 10:
             folder_name = '0' + str(i)
         else:
             folder_name = str(i)
             
         # Files 01 - 99
-        for j in range(1,100):
+        for j in range(1,25):
             if j < 10:
                 file_name = '0' + str(j)
             else:
@@ -77,12 +77,13 @@ def _read_test(datafolder):
     sentences = [question[x]['statement'] for x in question]
     return sentences
 
+# returns sentence with first 5 answer choices with the rest of the sentence
 def _read_test_stop_at_blank(datafolder):
     question, answer = get_test_data(datafolder)
     sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
-    new_sentences = []    
-    for i in range(10,11):
+    new_sentences = []
+    for i in range(1, len(question) + 1):
         sentence = question[str(i)]['statement']
         partial_sentence = sentence.split('_____')[0]
 
@@ -93,7 +94,7 @@ def _read_test_stop_at_blank(datafolder):
 
         new_sentence += replace_punctuation_marks(partial_sentence)
         new_sentences.append(new_sentence)
-    return new_sentences
+    return new_sentences[:200]
 
 # fill in blank with choices
 def fill_in_choices(datafolder):
@@ -141,6 +142,7 @@ def _build_vocab(filename):
 #   Parameters: filename indicating the document location (if train) or folder location (if not train)
 #               train boolean determining whether or not this is the training set
 #   Returns: list with integers representing the mapping of words to their ids
+#            list of sentences still in letter form
 def _file_to_word_ids(filename, word_to_id, train = True):
     """ Return list of indices for each word to the counts tuple """
     sentences = []
@@ -152,7 +154,7 @@ def _file_to_word_ids(filename, word_to_id, train = True):
     data = []
     for sentence in sentences:
         data.extend(sentence.split())
-    return [word_to_id[word] for word in data if word in word_to_id], sentences
+    return [word_to_id[word] for word in data if word in word_to_id], sentences, [[word_to_id[word] for word in sentence.split() if word in word_to_id] for sentence in sentences]
 
 # Maps train and test set to the corresponding ids
 #   Parameters: data_path: path to your repo of 6.864_project (can just leave at None)
@@ -168,20 +170,16 @@ def _raw_data(data_path=None):
         tuple (train_data, test_data, vocabulary)
         where each of the data objects can be passed to Iterator.
     """
-
     train_path = "dataset/treebank2/raw/wsj/"
-    # valid_path = os.path.join(data_path, "ptb.valid.txt")
     test_path = "dataset/MSR_Sentence_Completion_Challenge_V1/Data/"
+    question, answer = get_test_data(test_path)
 
     word_to_id = _build_vocab(train_path)  
-    train_data, train_sentences = _file_to_word_ids(train_path, word_to_id, True)
-    # valid_data = _file_to_word_ids(valid_path, word_to_id)
-    test_data, test_sentences  = _file_to_word_ids(test_path, word_to_id, False)
+    train_data, train_sentences, train_data_in_list_of_lists = _file_to_word_ids(train_path, word_to_id, True)
+    test_data, test_sentences, test_data_in_list_of_lists  = _file_to_word_ids(test_path, word_to_id, False)
     vocabulary = len(word_to_id)
-    return train_data, train_sentences, test_data, test_sentences, vocabulary
+    return word_to_id, train_data, test_sentences, test_data_in_list_of_lists, question, answer
 
-#train, test, vocab = _raw_data()
-#print len(train), train[:10], len(test), test[:10], vocab
 
 def bidirectional_producer(raw_data, batch_size, num_steps, name=None):
     """Iterate on the raw data.
