@@ -151,8 +151,8 @@ class SmallConfig(object):
     num_layers = 2
     num_steps = 1
     hidden_size = 200
-    max_epoch = 4
-    max_max_epoch = 13
+    max_epoch = 3
+    max_max_epoch = 5
     keep_prob = 1.0
     lr_decay = 0.5
     batch_size = 1
@@ -196,9 +196,9 @@ class TestConfig(object):
     init_scale = 0.1
     learning_rate = 1.0
     max_grad_norm = 1
-    num_layers = 1
+    num_layers = 2
     num_steps = 1 #2
-    hidden_size = 2
+    hidden_size = 10
     max_epoch = 1
     max_max_epoch = 1
     keep_prob = 1.0

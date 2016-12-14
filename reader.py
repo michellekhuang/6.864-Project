@@ -96,7 +96,6 @@ def _read_test_stop_at_blank(datafolder, bidirectional=False):
         else:
             new_forward_sentence = word_choices + replace_punctuation_marks(forward_sentence)
             new_sentences.append(new_forward_sentence)
-
     return new_sentences
 
 # fill in blank with choices
