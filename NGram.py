@@ -21,10 +21,9 @@ def get_bigram_data(training_data_folder):
     # go through all text files in training data folder (TBTAS10.TXT, MOHIC10.TXT, ACHOE10.TXT)
     for root, dirs, files in os.walk(training_data_folder):
         for i, file in enumerate(files):
-            print os.path.join(root, file)
             with open(os.path.join(root, file)) as f:
                 
-                print 'Starting ' + file + ' which is file ' + str(i) + ' out of ' + str(len(files))
+                print('Starting ' + file + ' which is file ' + str(i) + ' out of ' + str(len(files)))
                 
                 text = f.read()
                 
@@ -32,7 +31,7 @@ def get_bigram_data(training_data_folder):
                 try:
                     sentences = [nltk.tokenize.word_tokenize(s) for s in nltk.tokenize.sent_tokenize(text)]
                 except:
-                    print 'ERROR READING FILE'
+                    print('ERROR READING FILE')
                     continue
                     
                 for sentence in sentences:
@@ -175,13 +174,13 @@ def get_bigram_results(frequency, transition_prob, question, answer):
     return percent_correct, model_answer
     
 def run_bigram_model():
-    print 'Extracting Training Data...'
+    print('Extracting Training Data...')
     frequency, transition_prob = get_bigram_data('dataset/Holmes_Training_Data/')
-    print 'Extracting Test Data...'
+    print('Extracting Test Data...')
     question, answer = get_test_data('dataset/SAT_Questions')
-    print 'Computing Model Results...'
+    print('Computing Model Results...')
     percent_correct, model_answers = get_bigram_results(frequency, transition_prob, question, answer)
-    print 'Percent Correct: ' + str(percent_correct)
+    print('Percent Correct: ' + str(percent_correct))
 
 if __name__ == '__main__':
     run_bigram_model()

@@ -56,6 +56,7 @@ class LSTMModel(object):
     """The LSTM Model."""
     def __init__(self, is_training, config, input_):
         self._input = input_
+        self.vocab_size = config.vocab_size
 
         batch_size = input_.batch_size
         num_steps = input_.num_steps
@@ -249,6 +250,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         vals = session.run(fetches, feed_dict)
         cost = vals["cost"]
         state = vals["final_state"]
+
         proba = vals["proba"] # added to test proba
         if model.input.epoch_size != 0:
             if verbose and step % (model.input.epoch_size // 25) == 10:
@@ -350,9 +352,9 @@ def main(_):
                     continue
                 run_epoch(session, mtest)
                 ans = find_best_answer(session, mtest, test_sentences[i].split()[0:5], word_to_id)
-                print('best answer')
+                print('Best answer')
                 print(ans)
-                print('correct answer')
+                print('Correct answer')
                 print('Answer to problem', i+1, 'is', answer[str(i+1)])
                 if ans[0] == answer[str(i+1)]:
                     num_correct += 1
