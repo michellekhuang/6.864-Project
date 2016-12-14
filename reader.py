@@ -94,7 +94,7 @@ def _read_test_stop_at_blank(datafolder):
 
         new_sentence += replace_punctuation_marks(partial_sentence)
         new_sentences.append(new_sentence)
-    return new_sentences[:100]
+    return new_sentences
 
 # fill in blank with choices
 def fill_in_choices(datafolder):
