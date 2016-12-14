@@ -294,7 +294,6 @@ def create_test_tensor(sentence_test_data, eval_config, initializer):
     return test_model
 
 def main(_):
-    word_to_id = reader._build_vocab('dataset/treebank2/raw/wsj/')
     if not FLAGS.data_path:
         raise ValueError("Must set --data_path to LSTM data directory")
 
@@ -342,7 +341,7 @@ def main(_):
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 run_epoch(session, m, eval_op=m.train_op, verbose=True)
             
-            with open('forward_out.txt', 'w') as f:
+            with open('forward_out_SAT.txt', 'w') as f:
                 num_correct = 0.0
                 for i in range(len(test_sentences)):
                     mtest = mtests[i]
