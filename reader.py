@@ -1,6 +1,6 @@
 # References: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/rnn/ptb/reader.py
 
-# python LSTM.py --data_path=. --model small --bidirectional True
+# python LSTM.py --data_path=. --model small --backwards True
 
 """Utilities for parsing text files."""
 # from __future__ import absolute_import
@@ -16,7 +16,7 @@ import tensorflow as tf
 # Goes through the WSJ corpus and reads all of the sentences
 #   Parameters: path of folder of the wsj corpus
 #   Returns: list of sentences
-def _read_words(filename, bidirectional):
+def _read_words(filename, backwards):
 
     # Folders in wsj 00 - 24
     folder_name = 0
@@ -40,7 +40,7 @@ def _read_words(filename, bidirectional):
                     line = line.replace('\n', '')
                     new_line = replace_punctuation_marks(line)
                     if new_line != 'START ' and new_line != '':
-                        if bidirectional:
+                        if backwards:
                             sentences.append(reverse_words_in_string(new_line))
                         else:
                             sentences.append(new_line)
@@ -75,7 +75,7 @@ def _read_test(datafolder):
 # returns tuple:
 #     sentence with first 5 answer choices with sentence from beginning to blank
 #     sentence with first 5 answer choices with reversed sentence from end to blank
-def _read_test_stop_at_blank(datafolder, bidirectional=False):
+def _read_test_stop_at_blank(datafolder, backwards=False):
     question, answer = get_test_data(datafolder)
     sentences = [question[x]['statement'] for x in question]
     n = len(sentences)
@@ -89,7 +89,7 @@ def _read_test_stop_at_blank(datafolder, bidirectional=False):
             word_choice = question[str(i)][choice] + " "
             word_choices += word_choice
 
-        if bidirectional:
+        if backwards:
             reversed_backward_sentence = reverse_words_in_string(replace_punctuation_marks(backward_sentence))
             new_reversed_backward_sentence = word_choices + reversed_backward_sentence
             new_sentences.append(new_reversed_backward_sentence)
@@ -121,7 +121,7 @@ def fill_in_choices(datafolder):
 #   Parameters: filename of document to be read
 #   Returns: dictionary of unique words mapped to an integer id
 def _build_vocab(filename):
-    sentences = _read_words(filename, bidirectional=False)
+    sentences = _read_words(filename, backwards=False)
     data = []
     for sentence in sentences:
         data.extend(sentence.split())
@@ -145,13 +145,13 @@ def _build_vocab(filename):
 #               train boolean determining whether or not this is the training set
 #   Returns: list with integers representing the mapping of words to their ids
 #            list of sentences still in letter form
-def _file_to_word_ids(filename, word_to_id, train=True, bidirectional=False):
+def _file_to_word_ids(filename, word_to_id, train=True, backwards=False):
     """ Return list of indices for each word to the counts tuple """
     sentences = []
     if train:
-        sentences = _read_words(filename, bidirectional)
+        sentences = _read_words(filename, backwards)
     else:
-        sentences = _read_test_stop_at_blank(filename, bidirectional)
+        sentences = _read_test_stop_at_blank(filename, backwards)
     data = []
     for sentence in sentences:
         data.extend(sentence.split())
@@ -160,7 +160,7 @@ def _file_to_word_ids(filename, word_to_id, train=True, bidirectional=False):
 # Maps train and test set to the corresponding ids
 #   Parameters: data_path: path to your repo of 6.864_project (can just leave at None)
 #   Returns: Mapped version of train data, test data, and the length of the vocabulary
-def _raw_data(data_path=None, bidirectional=False):
+def _raw_data(data_path=None, backwards=False):
     """Load training/test raw data from data directory "data_path".
     Reads text files, converts strings to integer ids,
     and performs mini-batching of the inputs.
@@ -172,22 +172,21 @@ def _raw_data(data_path=None, bidirectional=False):
         where each of the data objects can be passed to Iterator.
     """
     train_path = "dataset/treebank2/raw/wsj/"
-    test_path = "dataset/SAT_Questions/"
+    test_path = "dataset/MSR_Sentence_Completion_Challenge_V1/Data"
     question, answer = get_test_data(test_path)
 
     word_to_id = _build_vocab(train_path)  
-    train_data, train_sentences, train_data_in_list_of_lists = _file_to_word_ids(train_path, word_to_id, True, bidirectional)
-    test_data, test_sentences, test_data_in_list_of_lists  = _file_to_word_ids(test_path, word_to_id, False, bidirectional)
+    train_data, train_sentences, train_data_in_list_of_lists = _file_to_word_ids(train_path, word_to_id, True, backwards)
+    test_data, test_sentences, test_data_in_list_of_lists  = _file_to_word_ids(test_path, word_to_id, False, backwards)
     vocabulary = len(word_to_id)
     return word_to_id, train_data, test_sentences, test_data_in_list_of_lists, question, answer
 
-
-def bidirectional_producer(raw_data, batch_size, num_steps, name=None):
+def _producer(raw_data, batch_size, num_steps, name=None):
     """Iterate on the raw data.
     This chunks up raw_data into batches of examples and returns Tensors that
     are drawn from these batches.
     Args:
-        raw_data: one of the raw data outputs from bidirectional_raw_data.
+        raw_data: one of the raw data outputs from raw_data.
         batch_size: int, the batch size.
         num_steps: int, the number of unrolls.
     Returns:

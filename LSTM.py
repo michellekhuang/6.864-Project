@@ -19,7 +19,7 @@ flags.DEFINE_string("model", "small",
 flags.DEFINE_string("data_path", None, "Where the training/test data is stored.")
 flags.DEFINE_string("save_path", None, "Model output directory.")
 flags.DEFINE_bool("use_fp16", False, "Train using 16-bit floats instead of 32bit floats")
-flags.DEFINE_bool("bidirectional", False, "Train using bidirectional LSTM model.")
+flags.DEFINE_bool("backwards", False, "Train backwards with the LSTM model.")
 
 FLAGS = flags.FLAGS
 
@@ -33,22 +33,19 @@ class LSTMInput(object):
         self.batch_size = batch_size = config.batch_size
         self.num_steps = num_steps = config.num_steps
         self.epoch_size = ((len(data) // batch_size) - 1) // num_steps
-        self.input_data, self.targets = reader.bidirectional_producer(
+        self.input_data, self.targets = reader._producer(
                 data, batch_size, num_steps, name=name)
 
 
 class LSTMModel(object):
     """The LSTM Model."""
-    def __init__(self, is_training, config, input_, bidirectional=False):
+    def __init__(self, is_training, config, input_):
         self._input = input_
 
         batch_size = input_.batch_size
         num_steps = input_.num_steps
         size = config.hidden_size
         vocab_size = config.vocab_size
-
-        if bidirectional:
-            print("Using bidirectional LSTM")
 
         # Slightly better results can be obtained with forget gate biases
         # initialized to 1 but the hyperparameters of the model would need to be
@@ -264,21 +261,22 @@ def find_answer_probs(session, model, answer_words, word_to_id):
             word_id = word_to_id[answer_words[i]]
             prob = session.run(model.proba)[0][word_id]
         answers.append((letter, answer_words[i], word_id, prob))
+    print(answers)
     return answers
         
-def create_test_tensor(sentence_test_data, eval_config, initializer, bidirectional):
+def create_test_tensor(sentence_test_data, eval_config, initializer):
     with tf.name_scope("Test"):
         test_input = LSTMInput(config=eval_config, data=sentence_test_data, name="TestInput")
         with tf.variable_scope("Model", reuse=True, initializer=initializer):
             test_model = LSTMModel(is_training=False, config=eval_config,
-                                             input_=test_input, bidirectional=bidirectional)
+                                             input_=test_input)
     return test_model
 
 def main(_):
     if not FLAGS.data_path:
         raise ValueError("Must set --data_path to LSTM data directory")
 
-    raw_data = reader._raw_data(FLAGS.data_path, FLAGS.bidirectional)
+    raw_data = reader._raw_data(FLAGS.data_path, FLAGS.backwards)
     word_to_id, train_data, test_sentences, test_data_in_list_of_lists, question, answer = raw_data
     config = get_config()
     eval_config = get_config()
@@ -289,7 +287,7 @@ def main(_):
         with tf.name_scope("Train"):
             train_input = LSTMInput(config=config, data=train_data, name="TrainInput")
             with tf.variable_scope("Model", reuse=None, initializer=initializer):
-                m = LSTMModel(is_training=True, config=config, input_=train_input, bidirectional=FLAGS.bidirectional)
+                m = LSTMModel(is_training=True, config=config, input_=train_input)
             tf.summary.scalar("Training Loss", m.cost)
             tf.summary.scalar("Learning Rate", m.lr)
         
@@ -300,7 +298,7 @@ def main(_):
             if len(test_data_in_list_of_lists[i]) < 2:
                 mtests.append(None)
             else:
-                new_test = create_test_tensor(test_data_in_list_of_lists[i], eval_config, initializer, bidirectional=FLAGS.bidirectional)
+                new_test = create_test_tensor(test_data_in_list_of_lists[i], eval_config, initializer)
                 mtests.append(new_test)
 
         sv = tf.train.Supervisor(logdir=FLAGS.save_path)
@@ -314,7 +312,7 @@ def main(_):
                 print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
                 run_epoch(session, m, eval_op=m.train_op, verbose=True)
             
-            with open('forward_out_SAT.txt', 'w') as f:
+            with open('backwards_out_SAT.txt', 'w') as f:
                 num_correct = 0.0
                 for i in range(len(test_sentences)):
                     mtest = mtests[i]
